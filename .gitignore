@@ -48,4 +48,7 @@ Thumbs.db
 .env.*
 !.env.example
 
+### IntelliJ HTTP Client (비밀값을 담는 private 환경 파일) ###
+*.private.env.json
+
 logs/
