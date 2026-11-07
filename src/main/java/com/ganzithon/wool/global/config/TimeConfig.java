@@ -9,7 +9,7 @@ import java.time.ZoneId;
 @Configuration
 public class TimeConfig {
 
-    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
+    public static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
 
     @Bean
     public Clock clock() {
