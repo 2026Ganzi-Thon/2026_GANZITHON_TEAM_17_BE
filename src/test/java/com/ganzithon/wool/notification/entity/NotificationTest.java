@@ -77,6 +77,15 @@ class NotificationTest {
                 .doesNotThrowAnyException();
     }
 
+    // 어떤 알림 종류도 가지 않는 MY_REPLIES까지 포함해, 스키마 주석("REPLY/CERTIFICATE만 값 있음")대로 고정한다.
+    @Test
+    void 대상_ID가_필요한_이동_화면은_답장과_감사장뿐이다() {
+        for (TargetKind kind : TargetKind.values()) {
+            boolean expected = kind == TargetKind.REPLY || kind == TargetKind.CERTIFICATE;
+            assertThat(kind.requiresTargetId()).as(kind.name()).isEqualTo(expected);
+        }
+    }
+
     @Test
     void 알림_종류는_명세에_정한_이동_화면으로만_만들_수_있다() {
         assertThat(NotificationType.REPLY_ARRIVED.targetKind()).isEqualTo(TargetKind.REPLY);
