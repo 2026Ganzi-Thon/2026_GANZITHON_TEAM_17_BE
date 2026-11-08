@@ -9,6 +9,8 @@ import com.ganzithon.wool.notification.exception.NotificationErrorCode;
 import com.ganzithon.wool.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +25,12 @@ class NotificationServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     // 테스트마다 다른 수신자를 써서 서로의 데이터에 영향받지 않는다.
     private static String newUserId() {
@@ -64,6 +72,58 @@ class NotificationServiceTest extends IntegrationTestSupport {
 
         assertThat(mine).extracting(Notification::getId)
                 .containsExactly(third.getId(), second.getId(), first.getId());
+    }
+
+    @Test
+    void 생성_시각이_같으면_ID가_큰_알림이_먼저다() {
+        String me = newUserId();
+        // 생성 시각을 직접 정해야 하므로 같은 created_at의 행을 SQL로 넣는다. (저장 순서와 다른 순서로 ID가 붙지 않도록 차례로 넣는다)
+        for (String title : List.of("가", "나", "다")) {
+            jdbcTemplate.update("INSERT INTO notifications (user_id, type, title, target_kind, is_read, created_at) "
+                    + "VALUES (?, 'THANKS_ARRIVED', ?, 'RECEIVED', FALSE, '2026-11-08 10:00:00.000000')", me, title);
+        }
+
+        List<Notification> mine = notificationService.getMyNotifications(me);
+
+        assertThat(mine).extracting(Notification::getTitle).containsExactly("다", "나", "가");
+        // 정렬 기준이 되는 생성 시각이 세 행 모두 실제로 같다는 전제도 확인한다.
+        assertThat(mine).hasSize(3);
+        assertThat(mine).extracting(Notification::getCreatedAt).containsOnly(mine.get(0).getCreatedAt());
+    }
+
+    @Test
+    void 생성_시각이_다르면_ID와_상관없이_최신_시각이_먼저다() {
+        String me = newUserId();
+        jdbcTemplate.update("INSERT INTO notifications (user_id, type, title, target_kind, is_read, created_at) "
+                + "VALUES (?, 'THANKS_ARRIVED', '나중에 만든 것 같지만 오래된 알림', 'RECEIVED', FALSE, '2026-11-01 10:00:00.000000')", me);
+        jdbcTemplate.update("INSERT INTO notifications (user_id, type, title, target_kind, is_read, created_at) "
+                + "VALUES (?, 'THANKS_ARRIVED', '최근 알림', 'RECEIVED', FALSE, '2026-11-08 10:00:00.000000')", me);
+
+        assertThat(notificationService.getMyNotifications(me)).extracting(Notification::getTitle)
+                .containsExactly("최근 알림", "나중에 만든 것 같지만 오래된 알림");
+    }
+
+    @Test
+    void 바깥_트랜잭션이_롤백되면_알림도_함께_취소된다() {
+        String userId = newUserId();
+
+        assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(status -> {
+            send(userId, "함께 취소될 알림");
+            // 이 안에서는 같은 트랜잭션이라 방금 저장한 알림이 보인다.
+            assertThat(notificationService.getMyNotifications(userId)).hasSize(1);
+            throw new IllegalStateException("답장 저장 실패를 흉내 낸 예외");
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(notificationService.getMyNotifications(userId)).isEmpty();
+    }
+
+    @Test
+    void 바깥_트랜잭션이_커밋되면_알림도_함께_저장된다() {
+        String userId = newUserId();
+
+        transactionTemplate.executeWithoutResult(status -> send(userId, "함께 저장될 알림"));
+
+        assertThat(notificationService.getMyNotifications(userId)).hasSize(1);
     }
 
     @Test

@@ -21,7 +21,8 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    // 호출한 쪽의 트랜잭션에 참여한다. (답장 저장과 알림 저장이 같이 성공하거나 같이 취소된다)
+    // 호출한 쪽에 트랜잭션이 있으면 거기에 참여하고(답장 저장과 알림 저장이 같이 커밋되거나 같이 롤백된다),
+    // 없으면 이 메서드가 새 트랜잭션을 연다. 다른 Bean에서 호출해야 트랜잭션이 적용된다.
     @Transactional
     public Notification send(String userId, NotificationType type, String title, String content,
                              TargetKind targetKind, Long targetId) {

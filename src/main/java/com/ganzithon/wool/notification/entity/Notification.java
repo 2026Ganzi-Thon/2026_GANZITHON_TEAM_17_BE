@@ -71,10 +71,14 @@ public class Notification extends BaseCreatedEntity {
         if (type == null || targetKind == null) {
             throw new IllegalArgumentException("알림 종류와 이동 대상 종류는 필수입니다.");
         }
-        if (title == null || title.isBlank() || title.length() > TITLE_MAX_LENGTH) {
+        if (type.targetKind() != targetKind) {
+            throw new IllegalArgumentException(type + " 알림은 " + type.targetKind() + "로만 이동할 수 있습니다.");
+        }
+        // MySQL VARCHAR 길이는 문자(코드포인트) 단위다. 이모지가 둘로 세어지지 않도록 String.length()를 쓰지 않는다.
+        if (title == null || title.isBlank() || title.codePointCount(0, title.length()) > TITLE_MAX_LENGTH) {
             throw new IllegalArgumentException("알림 문구는 1자 이상 " + TITLE_MAX_LENGTH + "자 이하여야 합니다.");
         }
-        if (content != null && content.length() > CONTENT_MAX_LENGTH) {
+        if (content != null && content.codePointCount(0, content.length()) > CONTENT_MAX_LENGTH) {
             throw new IllegalArgumentException("알림 내용은 " + CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
         }
         if (targetKind.requiresTargetId() != (targetId != null)) {
