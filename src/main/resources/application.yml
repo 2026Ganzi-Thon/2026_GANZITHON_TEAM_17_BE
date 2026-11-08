@@ -6,6 +6,13 @@ spring:
   profiles:
     active: local
 
+# 위기 표현 감지(Solar). 키가 비어 있으면 호출하지 않고 위기 키워드 목록으로만 판단한다.
+upstage:
+  api-key: ${UPSTAGE_API_KEY:}
+  base-url: https://api.upstage.ai/v1
+  model: solar-mini4
+  timeout: 3s
+
 ---
 spring:
   config:
