@@ -32,7 +32,10 @@ class UserControllerTest extends IntegrationTestSupport {
     private UserRepository userRepository;
 
     private MvcResult join(String body) throws Exception {
-        return mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(body)).andReturn();
+        // 실패했을 때 원인이 가입 응답 코드에서 바로 보이도록 먼저 201인지 확인한다.
+        return mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andReturn();
     }
 
     @Test
@@ -46,7 +49,9 @@ class UserControllerTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.data.userId", matchesPattern("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
                 .andExpect(jsonPath("$.data.role").value("SENIOR"))
                 .andExpect(jsonPath("$.data.ageGroup").value("70S_PLUS"))
-                .andExpect(jsonPath("$.data.nickname", matchesPattern("[가-힣]+ 양 [1-9]\\d{2}")));
+                .andExpect(jsonPath("$.data.nickname", matchesPattern("[가-힣]+ 양 [1-9]\\d{2}")))
+                // 명세의 네 필드 외에 다른 값이 내려가지 않는다.
+                .andExpect(jsonPath("$.data.length()").value(4));
     }
 
     @Test
