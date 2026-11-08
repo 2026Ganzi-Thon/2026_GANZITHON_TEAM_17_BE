@@ -4,5 +4,3 @@ spring:
       ddl-auto: none
 groq:
   api-key: ${GROQ_API_KEY}
-upstage:
-  api-key: ${UPSTAGE_API_KEY}
