@@ -39,6 +39,8 @@ class UserServiceTest {
     @Test
     void 저장할_때_닉네임이_겹치면_닉네임을_새로_만들어_다시_저장한다() {
         when(nicknameGenerator.generate()).thenReturn("포근한 양 312", "다정한 양 745");
+        // 실패한 뒤 조회하면 그 닉네임이 이미 저장되어 있다. (닉네임 UNIQUE 위반)
+        when(userRepository.existsByNickname("포근한 양 312")).thenReturn(true);
         when(userRepository.saveAndFlush(any(User.class)))
                 .thenThrow(new DataIntegrityViolationException("닉네임 UNIQUE 위반"))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -51,8 +53,23 @@ class UserServiceTest {
     }
 
     @Test
-    void 계속_실패하면_다섯_번째에서_예외를_그대로_올린다() {
+    void 닉네임과_무관한_무결성_오류는_다시_시도하지_않고_바로_올린다() {
         when(nicknameGenerator.generate()).thenReturn("포근한 양 312");
+        // 실패한 뒤 조회해도 그 닉네임이 저장되어 있지 않다. (NOT NULL, 길이 초과 등 다른 원인)
+        when(userRepository.existsByNickname("포근한 양 312")).thenReturn(false);
+        DataIntegrityViolationException failure = new DataIntegrityViolationException("NOT NULL 위반");
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(failure);
+
+        assertThatThrownBy(() -> userService.join(Role.YOUTH, AgeGroup.AGE_20S)).isSameAs(failure);
+
+        verify(userRepository, times(1)).saveAndFlush(any(User.class));
+        verify(nicknameGenerator, times(1)).generate();
+    }
+
+    @Test
+    void 계속_닉네임이_겹치면_다섯_번째에서_예외를_그대로_올린다() {
+        when(nicknameGenerator.generate()).thenReturn("포근한 양 312");
+        when(userRepository.existsByNickname("포근한 양 312")).thenReturn(true);
         DataIntegrityViolationException failure = new DataIntegrityViolationException("닉네임 UNIQUE 위반");
         when(userRepository.saveAndFlush(any(User.class))).thenThrow(failure);
 

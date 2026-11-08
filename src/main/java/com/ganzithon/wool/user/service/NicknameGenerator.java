@@ -38,7 +38,10 @@ public class NicknameGenerator {
         this.random = random;
     }
 
-    // 기존 닉네임과 겹치지 않는 닉네임을 만든다. 조합(20 x 900 = 18000개)이 거의 소진돼 계속 겹치면 예외를 던진다.
+    // 기존 닉네임과 겹치지 않는 닉네임을 만든다.
+    // 알려진 제약: 조합은 20 x 900 = 18000개라 가입자가 18000명이면 더는 만들 수 없다. 무작위로 30번만 시도하므로
+    // 그 전에도 사용률이 높으면 빈 닉네임이 남아 있어도 실패할 수 있다. (사용률 95%면 약 21%, 99%면 약 74%)
+    // 해커톤 규모에서는 감수하고, 늘려야 하면 형용사나 숫자 범위를 늘린다. (숫자를 4자리로 하면 형용사는 3자 이하여야 10자 이내)
     public String generate() {
         for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             String nickname = randomNickname();
