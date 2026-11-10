@@ -8,7 +8,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum WorryResponseCode implements ResponseCode {
-    CREATED(HttpStatus.CREATED, "WORRY_201_1", "고민이 선배님들께 전달됐어요.");
+    CREATED(HttpStatus.CREATED, "WORRY_201_1", "고민이 선배님들께 전달됐어요."),
+    MY_LIST(HttpStatus.OK, "WORRY_200_1", "내 고민 목록 조회에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
