@@ -9,6 +9,8 @@ import com.ganzithon.wool.user.repository.UserRepository;
 import com.ganzithon.wool.worry.repository.WorryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -74,6 +76,7 @@ class WorryControllerTest extends IntegrationTestSupport {
     @Test
     void 잘못된_입력과_차단된_내용은_저장하지_않는다() throws Exception {
         for (String input : new String[]{"{}", body(" ", "본문"), body("가".repeat(41), "본문"),
+                "{\"title\":\"제목\",\"content\":\"본문\",\"tag\":\"PARENTING\",\"visibility\":\"PUBLIC\"}",
                 "{\"title\":\"제목\",\"content\":\"본문\",\"tag\":\"BAD\",\"visibility\":\"PUBLIC\"}",
                 "{\"title\":\"제목\",\"content\":\"본문\",\"tag\":0,\"visibility\":\"PUBLIC\"}"}) {
             mockMvc.perform(post("/api/worries").header("X-User-Id", youth.getId())
@@ -85,6 +88,17 @@ class WorryControllerTest extends IntegrationTestSupport {
                 .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("FILTER_422_002"));
         assertThat(worryRepository.count()).isZero();
         verifyNoInteractions(solarClient);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CAREER", "LOVE", "FAMILY", "RELATIONSHIP", "LIVING", "MIND", "HEALTH", "OTHER"})
+    void 정해진_여덟_태그로_고민을_작성할_수_있다(String tag) throws Exception {
+        String input = body("고민 제목", "고민 내용").replace("CAREER", tag);
+        mockMvc.perform(post("/api/worries").header("X-User-Id", youth.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(input))
+                .andExpect(status().isCreated());
+        assertThat(worryRepository.findAll()).singleElement()
+                .satisfies(worry -> assertThat(worry.getTag().name()).isEqualTo(tag));
     }
 
     @Test
