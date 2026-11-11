@@ -23,6 +23,16 @@ class UserServiceTest {
     private final UserService userService = new UserService(userRepository, nicknameGenerator);
 
     @Test
+    void 닉네임_추천은_생성기의_결과를_그대로_돌려주고_저장하지_않는다() {
+        when(nicknameGenerator.generate()).thenReturn("포근한 양 312");
+
+        String suggested = userService.suggestNickname();
+
+        assertThat(suggested).isEqualTo("포근한 양 312");
+        verify(userRepository, times(0)).saveAndFlush(any(User.class));
+    }
+
+    @Test
     void 가입하면_역할과_나이대와_만든_닉네임으로_저장한다() {
         when(nicknameGenerator.generate()).thenReturn("포근한 양 312");
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
