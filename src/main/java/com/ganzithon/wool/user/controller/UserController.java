@@ -32,7 +32,7 @@ public class UserController {
     // USER-001 가입. 인증 헤더 없이 호출한다.
     @PostMapping
     public ResponseEntity<ApiResponse<JoinResponse>> join(@Valid @RequestBody JoinRequest request) {
-        JoinResponse response = JoinResponse.from(userService.join(request.role(), request.ageGroup()));
+        JoinResponse response = JoinResponse.from(userService.join(request.role(), request.ageGroup(), request.nickname()));
         return ApiResponse.of(UserResponseCode.JOINED, response).toResponseEntity();
     }
 }
