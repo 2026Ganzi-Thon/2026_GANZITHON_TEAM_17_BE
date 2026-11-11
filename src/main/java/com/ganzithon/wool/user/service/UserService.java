@@ -17,6 +17,12 @@ public class UserService {
     private final UserRepository userRepository;
     private final NicknameGenerator nicknameGenerator;
 
+    // 가입 화면에서 미리 보여줄 닉네임을 하나 돌려준다. 저장하거나 예약하지 않으므로, 가입하기 전에 다른 사람이
+    // 같은 닉네임을 쓰면 그 닉네임으로 가입할 수 없을 수 있다. (그때는 새 닉네임을 다시 받는다)
+    public String suggestNickname() {
+        return nicknameGenerator.generate();
+    }
+
     // 로그인 없이 사용자 ID(UUID)를 발급한다. 역할별 나이 제한은 없다.
     //
     // 닉네임 중복 확인과 저장 사이에 같은 닉네임이 먼저 저장될 수 있어(UNIQUE 위반) 닉네임을 새로 만들어 다시 저장한다.

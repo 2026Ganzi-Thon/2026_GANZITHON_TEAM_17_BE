@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum UserResponseCode implements ResponseCode {
 
-    JOINED(HttpStatus.CREATED, "USER_201_1", "가입에 성공했습니다.");
+    JOINED(HttpStatus.CREATED, "USER_201_1", "가입에 성공했습니다."),
+    NICKNAME_SUGGESTED(HttpStatus.OK, "USER_200_3", "닉네임을 추천했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
