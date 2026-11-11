@@ -27,7 +27,7 @@ public class Worry extends BaseSoftDeleteEntity {
     private String content;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('CAREER', 'LOVE', 'FAMILY', 'RELATIONSHIP', 'PARENTING', 'LIVING', 'MIND')")
+    @Column(nullable = false, columnDefinition = "ENUM('CAREER', 'LOVE', 'FAMILY', 'RELATIONSHIP', 'LIVING', 'MIND', 'HEALTH', 'OTHER')")
     private WorryTag tag;
 
     @Enumerated(EnumType.STRING)
