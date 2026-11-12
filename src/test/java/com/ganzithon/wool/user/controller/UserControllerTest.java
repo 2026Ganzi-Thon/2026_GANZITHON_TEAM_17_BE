@@ -218,7 +218,7 @@ class UserControllerTest extends IntegrationTestSupport {
 
     @Test
     void 추천받은_닉네임으로_바로_가입할_수_있다() throws Exception {
-        String suggestionBody = mockMvc.perform(get("/api/users/nickname-suggestion")).andExpect(status().isOk())
+        String suggestionBody = mockMvc.perform(get("/api/nicknames/suggestion")).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         String suggested = suggestionBody.replaceAll(".*\"nickname\":\"([^\"]+)\".*", "$1");
 
