@@ -19,6 +19,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -40,6 +42,21 @@ class MyWorryListTest extends IntegrationTestSupport {
     @AfterAll
     void dropRepliesTable() {
         jdbc.execute("DROP TABLE replies");
+    }
+
+    @Test
+    void 삭제한_고민은_내_고민_목록에서_제외된다() throws Exception {
+        User me = users.saveAndFlush(User.join(Role.YOUTH, AgeGroup.AGE_20S, "삭제목록청년"));
+        Worry deleted = worries.saveAndFlush(Worry.of(me, "삭제할 고민", "내용", WorryTag.MIND, WorryVisibility.PUBLIC));
+        Worry remaining = worries.saveAndFlush(Worry.of(me, "남길 고민", "내용", WorryTag.CAREER, WorryVisibility.PUBLIC));
+        jdbc.update("INSERT INTO replies VALUES (1, ?, FALSE, NULL, NULL)", deleted.getId());
+        mockMvc.perform(delete("/api/worries/{worryId}", deleted.getId()).header("X-User-Id", me.getId()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/worries/me").header("X-User-Id", me.getId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].worryId").value(remaining.getId()));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM replies WHERE worry_id = ?", Integer.class, deleted.getId()))
+                .isEqualTo(1);
     }
 
     @Test
