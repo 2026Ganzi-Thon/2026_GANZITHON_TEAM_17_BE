@@ -98,8 +98,21 @@ class WorryUpdateControllerTest extends IntegrationTestSupport {
     }
 
     @Test
-    void 답장_이력이_있으면_숨김이나_삭제_여부와_관계없이_수정할_수_없다() throws Exception {
-        jdbc.update("INSERT INTO replies VALUES (1, ?, TRUE, CURRENT_TIMESTAMP)", worry.getId());
+    void 삭제되거나_숨겨진_답장만_있으면_수정할_수_있다() throws Exception {
+        jdbc.update("INSERT INTO replies VALUES (1, ?, TRUE, NULL)", worry.getId());
+        jdbc.update("INSERT INTO replies VALUES (2, ?, FALSE, CURRENT_TIMESTAMP)", worry.getId());
+        jdbc.update("INSERT INTO replies VALUES (3, ?, TRUE, CURRENT_TIMESTAMP)", worry.getId());
+        mockMvc.perform(request(owner.getId(), worry.getId(), "{\"title\":\"새 제목\"}"))
+                .andExpect(status().isOk());
+        entityManager.clear();
+        assertThat(worries.findById(worry.getId()).orElseThrow().getTitle()).isEqualTo("새 제목");
+    }
+
+    @Test
+    void 삭제되거나_숨겨지지_않은_답장이_하나라도_있으면_수정할_수_없다() throws Exception {
+        jdbc.update("INSERT INTO replies VALUES (1, ?, TRUE, NULL)", worry.getId());
+        jdbc.update("INSERT INTO replies VALUES (2, ?, FALSE, CURRENT_TIMESTAMP)", worry.getId());
+        jdbc.update("INSERT INTO replies VALUES (3, ?, FALSE, NULL)", worry.getId());
         mockMvc.perform(request(owner.getId(), worry.getId(), "{\"title\":\"새 제목\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("WORRY_409_002"));
         assertThat(worry.getTitle()).isEqualTo("제목");

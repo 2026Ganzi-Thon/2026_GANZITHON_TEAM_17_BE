@@ -40,7 +40,8 @@ public class WorryUpdateTransaction {
             throw new BusinessException(WorryErrorCode.NOT_FOUND);
         }
         Boolean hasReplies = jdbcTemplate.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM replies WHERE worry_id = ?)", Boolean.class, worryId);
+                "SELECT EXISTS (SELECT 1 FROM replies WHERE worry_id = ? AND hidden = FALSE AND deleted_at IS NULL)",
+                Boolean.class, worryId);
         if (Boolean.TRUE.equals(hasReplies)) {
             throw new BusinessException(WorryErrorCode.UPDATE_CONFLICT);
         }
