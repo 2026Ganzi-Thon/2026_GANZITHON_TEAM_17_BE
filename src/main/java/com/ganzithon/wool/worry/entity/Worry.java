@@ -48,4 +48,8 @@ public class Worry extends BaseSoftDeleteEntity {
     public static Worry of(User author, String title, String content, WorryTag tag, WorryVisibility visibility) {
         return new Worry(author, title, content, tag, visibility);
     }
+
+    public void makeSeniorsOnly() {
+        this.visibility = WorryVisibility.SENIORS_ONLY;
+    }
 }
