@@ -7,7 +7,6 @@ import com.ganzithon.wool.user.request.JoinRequest;
 import com.ganzithon.wool.user.request.UpdateNicknameRequest;
 import com.ganzithon.wool.user.response.JoinResponse;
 import com.ganzithon.wool.user.response.MyInfoResponse;
-import com.ganzithon.wool.user.response.NicknameSuggestionResponse;
 import com.ganzithon.wool.user.response.UpdateNicknameResponse;
 import com.ganzithon.wool.user.response.UserResponseCode;
 import com.ganzithon.wool.user.service.UserService;
@@ -39,13 +38,6 @@ public class UserController {
             @LoginUser User user, @Valid @RequestBody UpdateNicknameRequest request) {
         UpdateNicknameResponse response = new UpdateNicknameResponse(userService.updateNickname(user, request.nickname()));
         return ApiResponse.of(UserResponseCode.NICKNAME_UPDATED, response).toResponseEntity();
-    }
-
-    // 가입 화면에서 처음 보여줄 닉네임을 받는다. 인증 헤더 없이 호출한다. (예약이 아니므로 가입 때 겹치면 409)
-    @GetMapping("/nickname-suggestion")
-    public ResponseEntity<ApiResponse<NicknameSuggestionResponse>> suggestNickname() {
-        NicknameSuggestionResponse response = new NicknameSuggestionResponse(userService.suggestNickname());
-        return ApiResponse.of(UserResponseCode.NICKNAME_SUGGESTED, response).toResponseEntity();
     }
 
     // USER-001 가입. 인증 헤더 없이 호출한다.

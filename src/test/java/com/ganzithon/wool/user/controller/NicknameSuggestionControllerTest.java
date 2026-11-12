@@ -17,13 +17,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class NicknameSuggestionControllerTest extends IntegrationTestSupport {
 
-    private static final String URL = "/api/users/nickname-suggestion";
+    private static final String URL = "/api/nicknames/suggestion";
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private UserRepository userRepository;
+
+    @Test
+    void 옛_경로는_더_이상_없다() throws Exception {
+        // 경로를 /api/users/nickname-suggestion에서 /api/nicknames/suggestion으로 옮겼다. (프론트가 아직 쓰기 전이라 별칭 없이 없앴다)
+        mockMvc.perform(get("/api/users/nickname-suggestion"))
+                .andExpect(status().isNotFound());
+    }
 
     @Test
     void 인증_헤더_없이_호출하면_200과_닉네임_하나를_래퍼로_내려준다() throws Exception {

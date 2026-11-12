@@ -21,7 +21,7 @@ class NicknameSuggestionFailureTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new NicknameController(userService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -30,7 +30,7 @@ class NicknameSuggestionFailureTest {
     void 닉네임을_만들지_못하면_COMMON_500으로_알린다() throws Exception {
         when(userService.suggestNickname()).thenThrow(new IllegalStateException("사용할 수 있는 닉네임을 만들지 못했습니다."));
 
-        mockMvc.perform(get("/api/users/nickname-suggestion"))
+        mockMvc.perform(get("/api/nicknames/suggestion"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.code").value("COMMON_500"))
