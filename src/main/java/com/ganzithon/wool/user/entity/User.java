@@ -56,6 +56,11 @@ public class User extends BaseCreatedEntity {
         return new User(role, ageGroup, nickname);
     }
 
+    // 검사(형식·금지어·중복)를 마친 닉네임만 넘긴다. 검사는 NicknameValidator가 한다.
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
     public boolean isYouth() {
         return role == Role.YOUTH;
     }

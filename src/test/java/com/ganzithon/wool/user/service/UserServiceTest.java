@@ -224,4 +224,89 @@ class UserServiceTest {
 
         verify(userRepository, times(1)).saveAndFlush(any(User.class));
     }
+
+    // ---------- 닉네임 수정 ----------
+
+    private User existingUser() {
+        return User.join(Role.YOUTH, AgeGroup.AGE_20S, "원래이름");
+    }
+
+    @Test
+    void 닉네임을_바꾸면_검사한_닉네임을_저장하고_돌려준다() {
+        User user = existingUser();
+        when(nicknameValidator.validate("  새이름  ", user.getId())).thenReturn("새이름");
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        String result = userService.updateNickname(user, "  새이름  ");
+
+        assertThat(result).isEqualTo("새이름");
+        assertThat(user.getNickname()).isEqualTo("새이름");
+        verify(userRepository, times(1)).saveAndFlush(user);
+    }
+
+    @Test
+    void 지금_닉네임과_같으면_저장하지_않고_그대로_성공한다() {
+        User user = existingUser();
+        when(nicknameValidator.validate("원래이름", user.getId())).thenReturn("원래이름");
+
+        String result = userService.updateNickname(user, "원래이름");
+
+        assertThat(result).isEqualTo("원래이름");
+        verify(userRepository, times(0)).saveAndFlush(any(User.class));
+    }
+
+    @Test
+    void 검사에서_걸리면_저장하지_않고_닉네임도_바뀌지_않는다() {
+        User user = existingUser();
+        BusinessException rejected = new BusinessException(UserErrorCode.NICKNAME_DUPLICATED);
+        when(nicknameValidator.validate("겹치는이름", user.getId())).thenThrow(rejected);
+
+        assertThatThrownBy(() -> userService.updateNickname(user, "겹치는이름")).isSameAs(rejected);
+
+        assertThat(user.getNickname()).isEqualTo("원래이름");
+        verify(userRepository, times(0)).saveAndFlush(any(User.class));
+    }
+
+    @Test
+    void 저장_때_UNIQUE_위반이고_다른_사람이_그_닉네임을_쓰면_409로_알리고_닉네임을_되돌린다() {
+        User user = existingUser();
+        when(nicknameValidator.validate("새이름", user.getId())).thenReturn("새이름");
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(violationOf(ConstraintViolationException.ConstraintKind.UNIQUE));
+        when(userRepository.existsByNicknameAndIdNot("새이름", user.getId())).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.updateNickname(user, "새이름"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(UserErrorCode.NICKNAME_DUPLICATED));
+
+        assertThat(user.getNickname()).isEqualTo("원래이름");
+    }
+
+    @Test
+    void 저장_실패_원인을_가릴_때_자기_자신은_빼고_조회한다() {
+        User user = existingUser();
+        when(nicknameValidator.validate("새이름", user.getId())).thenReturn("새이름");
+        DataIntegrityViolationException failure = violationOf(ConstraintViolationException.ConstraintKind.UNIQUE);
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(failure);
+        // 자기 자신 때문에 같은 값으로 잡히는 경우(대소문자만 바꾼 경우 등)는 제외하고 조회하면 없다
+        when(userRepository.existsByNicknameAndIdNot("새이름", user.getId())).thenReturn(false);
+        when(userRepository.existsByNickname("새이름")).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.updateNickname(user, "새이름")).isSameAs(failure);
+
+        verify(userRepository, times(0)).existsByNickname("새이름");
+        assertThat(user.getNickname()).isEqualTo("원래이름");
+    }
+
+    @Test
+    void 저장_실패가_NOT_NULL_위반이면_409로_바꾸지_않고_닉네임을_되돌린다() {
+        User user = existingUser();
+        when(nicknameValidator.validate("새이름", user.getId())).thenReturn("새이름");
+        DataIntegrityViolationException failure = violationOf(ConstraintViolationException.ConstraintKind.NOT_NULL);
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(failure);
+        when(userRepository.existsByNicknameAndIdNot("새이름", user.getId())).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.updateNickname(user, "새이름")).isSameAs(failure);
+
+        assertThat(user.getNickname()).isEqualTo("원래이름");
+    }
 }

@@ -42,6 +42,29 @@ public class UserService {
         return joinWithGeneratedNickname(role, ageGroup);
     }
 
+    // 가입한 사용자가 닉네임을 바꾼다. 형식 -> 금지어 -> 중복 순서로 검사하고, 겹치면 409이다. (자기 자신의 닉네임은 중복이 아니다)
+    // 지금 닉네임과 똑같이 보내면 바꿀 것이 없으므로 그대로 성공시킨다.
+    // join과 같은 이유로 @Transactional을 쓰지 않고, 바깥 트랜잭션 없이 호출해야 한다. (저장 실패를 잡아 409로 바꾸기 위해)
+    // 저장에 실패하면 메모리의 닉네임을 원래대로 되돌린다. 요청이 끝난 뒤에도 같은 객체가 남아 있을 수 있기 때문이다.
+    public String updateNickname(User user, String requestedNickname) {
+        String nickname = nicknameValidator.validate(requestedNickname, user.getId());
+        if (nickname.equals(user.getNickname())) {
+            return nickname;
+        }
+        String previous = user.getNickname();
+        user.changeNickname(nickname);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            user.changeNickname(previous);
+            if (isNicknameConflict(e, nickname, user.getId())) {
+                throw new BusinessException(UserErrorCode.NICKNAME_DUPLICATED);
+            }
+            throw e;
+        }
+        return nickname;
+    }
+
     // 사용자가 직접 정한 닉네임이다. 겹치면 서버가 마음대로 다른 닉네임으로 바꾸지 않고 409로 알려, 프론트가 사용자에게 다시 고르게 한다.
     // 확인(검증)과 저장 사이에 같은 닉네임이 먼저 저장된 경우도 같은 409로 돌려준다.
     private User joinWithNickname(Role role, AgeGroup ageGroup, String requestedNickname) {
@@ -78,10 +101,17 @@ public class UserService {
     // 닉네임과 무관한 UNIQUE 오류인 순간 다른 요청이 같은 닉네임을 저장해 둔 경우만 잘못 판단할 수 있는데, 다음 시도에서 같은 오류가
     // 다시 나면 그대로 올라가므로 오류가 숨겨지지는 않는다.
     private boolean isNicknameConflict(DataIntegrityViolationException e, String nickname) {
+        return isNicknameConflict(e, nickname, null);
+    }
+
+    // 닉네임을 바꾸다 실패한 경우에는 자기 자신을 뺀 조회를 쓴다. (대소문자만 바꾸면 내 행이 같은 값으로 잡히기 때문)
+    private boolean isNicknameConflict(DataIntegrityViolationException e, String nickname, String excludedUserId) {
         if (isKnownNonUniqueViolation(e)) {
             return false;
         }
-        return userRepository.existsByNickname(nickname);
+        return excludedUserId == null
+                ? userRepository.existsByNickname(nickname)
+                : userRepository.existsByNicknameAndIdNot(nickname, excludedUserId);
     }
 
     private static boolean isKnownNonUniqueViolation(Throwable e) {
