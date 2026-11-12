@@ -145,6 +145,45 @@ class NicknameValidatorTest {
         assertThat(validator.validate("가 나")).isEqualTo("가 나");
     }
 
+
+    // ---------- 닉네임 수정: 자기 자신은 중복으로 보지 않는다 ----------
+
+    @Test
+    void 가입한_사용자가_검사하면_자기_자신을_뺀_중복_조회를_쓴다() {
+        when(userRepository.existsByNicknameAndIdNot("새이름", "user-1")).thenReturn(false);
+
+        assertThat(validator.validate("새이름", "user-1")).isEqualTo("새이름");
+
+        verify(userRepository, never()).existsByNickname(anyString());
+    }
+
+    @Test
+    void 다른_사람이_쓰는_닉네임이면_409이다() {
+        when(userRepository.existsByNicknameAndIdNot("남의이름", "user-1")).thenReturn(true);
+
+        assertThatThrownBy(() -> validator.validate("남의이름", "user-1"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(UserErrorCode.NICKNAME_DUPLICATED));
+    }
+
+    @Test
+    void 사용자_ID가_없으면_기존처럼_전체에서_중복을_조회한다() {
+        when(userRepository.existsByNickname("새이름")).thenReturn(false);
+
+        assertThat(validator.validate("새이름", null)).isEqualTo("새이름");
+
+        verify(userRepository, never()).existsByNicknameAndIdNot(anyString(), anyString());
+    }
+
+    @Test
+    void 사용자가_있어도_형식과_금지어_검사는_그대로_한다() {
+        assertRejectedWith("가", CommonErrorCode.INVALID_INPUT);
+        assertThatThrownBy(() -> validator.validate("씨발이", "user-1"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(FilterErrorCode.BANNED_WORD));
+        verify(userRepository, never()).existsByNicknameAndIdNot(anyString(), anyString());
+    }
+
     // ---------- 금지어 422 ----------
 
     @ParameterizedTest

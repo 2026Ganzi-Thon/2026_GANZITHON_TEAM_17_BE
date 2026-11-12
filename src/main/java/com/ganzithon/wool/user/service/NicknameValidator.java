@@ -34,9 +34,18 @@ public class NicknameValidator {
 
     // 통과하면 앞뒤 공백을 잘라낸 닉네임을 돌려준다. (닉네임은 사람이 쓴 글이 아니라 식별용 이름이라 공백을 정리해 저장한다)
     public String validate(String raw) {
+        return validate(raw, null);
+    }
+
+    // 이미 가입한 사용자가 닉네임을 바꿀 때는 currentUserId를 넘긴다. 자기 자신의 닉네임은 중복으로 보지 않는다.
+    // (내 닉네임 그대로 다시 보내는 경우, 대소문자만 바꾸는 경우: DB가 대소문자를 구분하지 않아 내 닉네임과 "같은 값"으로 비교된다)
+    public String validate(String raw, String currentUserId) {
         String nickname = checkFormat(raw);
         contentFilter.validateNickname(nickname);
-        if (userRepository.existsByNickname(nickname)) {
+        boolean duplicated = currentUserId == null
+                ? userRepository.existsByNickname(nickname)
+                : userRepository.existsByNicknameAndIdNot(nickname, currentUserId);
+        if (duplicated) {
             throw new BusinessException(UserErrorCode.NICKNAME_DUPLICATED);
         }
         return nickname;
