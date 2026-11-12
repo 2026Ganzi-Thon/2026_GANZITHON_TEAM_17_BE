@@ -6,12 +6,15 @@ import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
 import com.ganzithon.wool.worry.request.ChangeVisibilityRequest;
 import com.ganzithon.wool.worry.request.CreateWorryRequest;
+import com.ganzithon.wool.worry.request.UpdateWorryRequest;
 import com.ganzithon.wool.worry.response.ChangeVisibilityResponse;
 import com.ganzithon.wool.worry.response.CreateWorryResponse;
 import com.ganzithon.wool.worry.response.MyWorryListResponse;
+import com.ganzithon.wool.worry.response.UpdateWorryResponse;
 import com.ganzithon.wool.worry.response.WorryResponseCode;
 import com.ganzithon.wool.worry.service.MyWorryListService;
 import com.ganzithon.wool.worry.service.WorryService;
+import com.ganzithon.wool.worry.service.WorryUpdateService;
 import com.ganzithon.wool.worry.service.WorryVisibilityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ public class WorryController {
     private final WorryService worryService;
     private final MyWorryListService myWorryListService;
     private final WorryVisibilityService worryVisibilityService;
+    private final WorryUpdateService worryUpdateService;
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<MyWorryListResponse>> myWorries(@LoginUser(Role.YOUTH) User user) {
@@ -41,6 +45,14 @@ public class WorryController {
     public ResponseEntity<ApiResponse<CreateWorryResponse>> create(
             @LoginUser(Role.YOUTH) User user, @Valid @RequestBody CreateWorryRequest request) {
         return ApiResponse.of(WorryResponseCode.CREATED, worryService.create(user, request)).toResponseEntity();
+    }
+
+    @PatchMapping("/{worryId}")
+    public ResponseEntity<ApiResponse<UpdateWorryResponse>> update(
+            @LoginUser(Role.YOUTH) User user, @PathVariable Long worryId,
+            @Valid @RequestBody UpdateWorryRequest request) {
+        return ApiResponse.of(WorryResponseCode.UPDATED,
+                worryUpdateService.update(user.getId(), worryId, request)).toResponseEntity();
     }
 
     @PatchMapping("/{worryId}/visibility")

@@ -9,8 +9,10 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum WorryErrorCode implements ErrorCode {
     FORBIDDEN_CHANGE(HttpStatus.FORBIDDEN, "WORRY_403_002", "내 고민만 변경할 수 있습니다."),
+    FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "WORRY_403_003", "수정할 권한이 없습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "WORRY_404_001", "고민을 찾을 수 없습니다."),
-    VISIBILITY_CONFLICT(HttpStatus.CONFLICT, "WORRY_409_001", "비공개 글은 전체 공개로 바꿀 수 없어요.");
+    VISIBILITY_CONFLICT(HttpStatus.CONFLICT, "WORRY_409_001", "비공개 글은 전체 공개로 바꿀 수 없어요."),
+    UPDATE_CONFLICT(HttpStatus.CONFLICT, "WORRY_409_002", "답장이 달린 고민은 수정할 수 없어요.");
 
     private final HttpStatus httpStatus;
     private final String code;
