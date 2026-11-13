@@ -9,16 +9,19 @@ import com.ganzithon.wool.worry.request.CreateWorryRequest;
 import com.ganzithon.wool.worry.request.UpdateWorryRequest;
 import com.ganzithon.wool.worry.response.ChangeVisibilityResponse;
 import com.ganzithon.wool.worry.response.CreateWorryResponse;
+import com.ganzithon.wool.worry.response.DeleteWorryResponse;
 import com.ganzithon.wool.worry.response.MyWorryListResponse;
 import com.ganzithon.wool.worry.response.UpdateWorryResponse;
 import com.ganzithon.wool.worry.response.WorryResponseCode;
 import com.ganzithon.wool.worry.service.MyWorryListService;
+import com.ganzithon.wool.worry.service.WorryDeleteService;
 import com.ganzithon.wool.worry.service.WorryService;
 import com.ganzithon.wool.worry.service.WorryUpdateService;
 import com.ganzithon.wool.worry.service.WorryVisibilityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,6 +37,7 @@ public class WorryController {
     private final WorryService worryService;
     private final MyWorryListService myWorryListService;
     private final WorryVisibilityService worryVisibilityService;
+    private final WorryDeleteService worryDeleteService;
     private final WorryUpdateService worryUpdateService;
 
     @GetMapping("/me")
@@ -53,6 +57,13 @@ public class WorryController {
             @Valid @RequestBody UpdateWorryRequest request) {
         return ApiResponse.of(WorryResponseCode.UPDATED,
                 worryUpdateService.update(user.getId(), worryId, request)).toResponseEntity();
+    }
+
+    @DeleteMapping("/{worryId}")
+    public ResponseEntity<ApiResponse<DeleteWorryResponse>> delete(
+            @LoginUser(Role.YOUTH) User user, @PathVariable Long worryId) {
+        return ApiResponse.of(WorryResponseCode.DELETED,
+                worryDeleteService.delete(user.getId(), worryId)).toResponseEntity();
     }
 
     @PatchMapping("/{worryId}/visibility")

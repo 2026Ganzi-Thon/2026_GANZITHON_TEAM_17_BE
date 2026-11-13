@@ -11,6 +11,7 @@ public enum WorryResponseCode implements ResponseCode {
     CREATED(HttpStatus.CREATED, "WORRY_201_1", "고민이 선배님들께 전달됐어요."),
     MY_LIST(HttpStatus.OK, "WORRY_200_1", "내 고민 목록 조회에 성공했습니다."),
     VISIBILITY_CHANGED(HttpStatus.OK, "WORRY_200_3", "공개 범위를 변경했습니다."),
+    DELETED(HttpStatus.OK, "WORRY_200_5", "고민을 삭제했습니다."),
     UPDATED(HttpStatus.OK, "WORRY_200_6", "고민을 수정했습니다.");
 
     private final HttpStatus httpStatus;

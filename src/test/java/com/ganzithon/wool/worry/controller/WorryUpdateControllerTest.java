@@ -124,7 +124,7 @@ class WorryUpdateControllerTest extends IntegrationTestSupport {
         mockMvc.perform(request(null, worry.getId(), body)).andExpect(status().isUnauthorized());
         mockMvc.perform(request(senior.getId(), worry.getId(), body)).andExpect(status().isForbidden());
         mockMvc.perform(request(other.getId(), worry.getId(), body)).andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("WORRY_403_003"));
+                .andExpect(jsonPath("$.code").value("WORRY_403_004"));
         mockMvc.perform(request(owner.getId(), Long.MAX_VALUE, body)).andExpect(status().isNotFound());
         worry.delete();
         worries.flush();
