@@ -52,4 +52,10 @@ public class Worry extends BaseSoftDeleteEntity {
     public void makeSeniorsOnly() {
         this.visibility = WorryVisibility.SENIORS_ONLY;
     }
+
+    public void update(String title, String content, WorryTag tag) {
+        if (title != null) this.title = title;
+        if (content != null) this.content = content;
+        if (tag != null) this.tag = tag;
+    }
 }
