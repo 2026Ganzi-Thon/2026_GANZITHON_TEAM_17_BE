@@ -74,6 +74,15 @@ public class User extends BaseCreatedEntity {
         this.restrictedUntil = restrictedUntil;
     }
 
+    // 지금 답장을 쓸 수 없는 상태인가. 영구 제한은 항상, 7일 제한은 해제 시각 전까지다.
+    // 7일 제한의 해제는 스케줄러가 하지만, 그 전에 만료 시각이 지났으면 막지 않는다.
+    public boolean isReplyRestrictedAt(LocalDateTime now) {
+        if (sanctionLevel == SanctionLevel.BANNED) {
+            return true;
+        }
+        return sanctionLevel == SanctionLevel.RESTRICTED && (restrictedUntil == null || now.isBefore(restrictedUntil));
+    }
+
     // 7일 제한이 만료됐을 때. 누적 신고 수는 reply_reports에서 계산하므로 여기서는 상태만 푼다.
     public void liftRestriction() {
         this.sanctionLevel = SanctionLevel.NONE;
