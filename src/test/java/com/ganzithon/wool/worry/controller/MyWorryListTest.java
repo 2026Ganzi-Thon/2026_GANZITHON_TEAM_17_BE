@@ -1,6 +1,8 @@
 package com.ganzithon.wool.worry.controller;
 
 import com.ganzithon.wool.IntegrationTestSupport;
+import com.ganzithon.wool.reply.entity.Reply;
+import com.ganzithon.wool.reply.repository.ReplyRepository;
 import com.ganzithon.wool.user.entity.AgeGroup;
 import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
@@ -9,15 +11,14 @@ import com.ganzithon.wool.worry.entity.Worry;
 import com.ganzithon.wool.worry.entity.WorryTag;
 import com.ganzithon.wool.worry.entity.WorryVisibility;
 import com.ganzithon.wool.worry.repository.WorryRepository;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -25,7 +26,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Transactional
 class MyWorryListTest extends IntegrationTestSupport {
     @Autowired private MockMvc mockMvc;
@@ -33,15 +33,16 @@ class MyWorryListTest extends IntegrationTestSupport {
     @Autowired private WorryRepository worries;
     @Autowired private JdbcTemplate jdbc;
 
-    // 테스트 프로필은 Flyway가 꺼져 있고 Reply 엔티티가 아직 없어 조회에 필요한 컬럼만 준비한다.
-    @BeforeAll
-    void createRepliesTable() {
-        jdbc.execute("CREATE TABLE replies (id BIGINT PRIMARY KEY, worry_id BIGINT NOT NULL, hidden BOOLEAN NOT NULL, deleted_at TIMESTAMP NULL, first_viewed_at TIMESTAMP NULL)");
-    }
+    @Autowired private ReplyRepository replies;
 
-    @AfterAll
-    void dropRepliesTable() {
-        jdbc.execute("DROP TABLE replies");
+    // 어르신 한 명은 같은 고민에 한 번만 답장할 수 있어서 답장마다 다른 어르신을 만든다.
+    private void saveReply(Worry worry, String seniorNickname, boolean hidden, boolean deleted, boolean viewed) {
+        User replier = users.saveAndFlush(User.join(Role.SENIOR, AgeGroup.AGE_60S, seniorNickname));
+        Reply reply = Reply.text(worry, replier, "답장");
+        if (hidden) reply.hide();
+        if (deleted) reply.delete();
+        if (viewed) reply.markFirstViewed(LocalDateTime.now());
+        replies.saveAndFlush(reply);
     }
 
     @Test
@@ -49,7 +50,7 @@ class MyWorryListTest extends IntegrationTestSupport {
         User me = users.saveAndFlush(User.join(Role.YOUTH, AgeGroup.AGE_20S, "삭제목록청년"));
         Worry deleted = worries.saveAndFlush(Worry.of(me, "삭제할 고민", "내용", WorryTag.MIND, WorryVisibility.PUBLIC));
         Worry remaining = worries.saveAndFlush(Worry.of(me, "남길 고민", "내용", WorryTag.CAREER, WorryVisibility.PUBLIC));
-        jdbc.update("INSERT INTO replies VALUES (1, ?, FALSE, NULL, NULL)", deleted.getId());
+        saveReply(deleted, "목록선배1", false, false, false);
         mockMvc.perform(delete("/api/worries/{worryId}", deleted.getId()).header("X-User-Id", me.getId()))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/worries/me").header("X-User-Id", me.getId()))
@@ -70,11 +71,11 @@ class MyWorryListTest extends IntegrationTestSupport {
         deleted.delete();
         worries.flush();
         jdbc.update("UPDATE worries SET hidden = TRUE WHERE id = ?", hidden.getId());
-        jdbc.update("INSERT INTO replies VALUES (1, ?, FALSE, NULL, CURRENT_TIMESTAMP)", first.getId());
-        jdbc.update("INSERT INTO replies VALUES (2, ?, FALSE, NULL, NULL)", first.getId());
-        jdbc.update("INSERT INTO replies VALUES (3, ?, TRUE, NULL, NULL)", first.getId());
-        jdbc.update("INSERT INTO replies VALUES (4, ?, FALSE, CURRENT_TIMESTAMP, NULL)", first.getId());
-        jdbc.update("INSERT INTO replies VALUES (5, ?, TRUE, NULL, NULL)", hidden.getId());
+        saveReply(first, "목록선배2", false, false, true);
+        saveReply(first, "목록선배3", false, false, false);
+        saveReply(first, "목록선배4", true, false, false);
+        saveReply(first, "목록선배5", false, true, false);
+        saveReply(hidden, "목록선배6", true, false, false);
 
         mockMvc.perform(get("/api/worries/me").header("X-User-Id", me.getId()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value("WORRY_200_1"))
