@@ -91,6 +91,28 @@ class MyWorryListTest extends IntegrationTestSupport {
     }
 
     @Test
+    void 고민마다_보이는_답장과_읽지_않은_답장만_각각_집계한다() throws Exception {
+        User me = users.saveAndFlush(User.join(Role.YOUTH, AgeGroup.AGE_20S, "집계작성자"));
+        User other = users.saveAndFlush(User.join(Role.YOUTH, AgeGroup.AGE_30S, "집계다른청년"));
+        Worry read = worries.saveAndFlush(Worry.of(me, "읽은 고민", "내용", WorryTag.MIND, WorryVisibility.PUBLIC));
+        Worry unread = worries.saveAndFlush(Worry.of(me, "안 읽은 고민", "내용", WorryTag.LOVE, WorryVisibility.PUBLIC));
+        Worry others = worries.saveAndFlush(Worry.of(other, "다른 고민", "내용", WorryTag.CAREER, WorryVisibility.PUBLIC));
+        saveReply(read, "집계선배1", false, false, true);
+        saveReply(read, "집계선배2", true, false, false);
+        saveReply(unread, "집계선배3", false, false, false);
+        saveReply(others, "집계선배4", false, false, false);
+
+        mockMvc.perform(get("/api/worries/me").header("X-User-Id", me.getId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.items[0].worryId").value(unread.getId()))
+                .andExpect(jsonPath("$.data.items[0].replyCount").value(1))
+                .andExpect(jsonPath("$.data.items[0].hasUnreadReply").value(true))
+                .andExpect(jsonPath("$.data.items[1].worryId").value(read.getId()))
+                .andExpect(jsonPath("$.data.items[1].replyCount").value(1))
+                .andExpect(jsonPath("$.data.items[1].hasUnreadReply").value(false));
+    }
+
+    @Test
     void 빈_목록과_접근_권한을_확인한다() throws Exception {
         User me = users.saveAndFlush(User.join(Role.YOUTH, AgeGroup.AGE_20S, "빈목록청년"));
         User senior = users.saveAndFlush(User.join(Role.SENIOR, AgeGroup.AGE_60S, "목록선배"));

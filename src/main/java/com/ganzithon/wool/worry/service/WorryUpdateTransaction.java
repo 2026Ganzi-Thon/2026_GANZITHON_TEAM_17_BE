@@ -1,13 +1,13 @@
 package com.ganzithon.wool.worry.service;
 
 import com.ganzithon.wool.global.exception.BusinessException;
+import com.ganzithon.wool.reply.repository.ReplyRepository;
 import com.ganzithon.wool.worry.entity.Worry;
 import com.ganzithon.wool.worry.exception.WorryErrorCode;
 import com.ganzithon.wool.worry.repository.WorryRepository;
 import com.ganzithon.wool.worry.request.UpdateWorryRequest;
 import com.ganzithon.wool.worry.response.UpdateWorryResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WorryUpdateTransaction {
     private final WorryRepository worryRepository;
-    private final JdbcTemplate jdbcTemplate;
+    private final ReplyRepository replyRepository;
 
     @Transactional
     public void validate(String userId, Long worryId) {
@@ -39,10 +39,7 @@ public class WorryUpdateTransaction {
         if (worry.isHidden()) {
             throw new BusinessException(WorryErrorCode.NOT_FOUND);
         }
-        Boolean hasReplies = jdbcTemplate.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM replies WHERE worry_id = ? AND hidden = FALSE AND deleted_at IS NULL)",
-                Boolean.class, worryId);
-        if (Boolean.TRUE.equals(hasReplies)) {
+        if (replyRepository.existsVisibleByWorryId(worryId)) {
             throw new BusinessException(WorryErrorCode.UPDATE_CONFLICT);
         }
         return worry;
