@@ -2,6 +2,8 @@ package com.ganzithon.wool.worry.controller;
 
 import com.ganzithon.wool.IntegrationTestSupport;
 import com.ganzithon.wool.filter.client.SolarClient;
+import com.ganzithon.wool.reply.entity.Reply;
+import com.ganzithon.wool.reply.repository.ReplyRepository;
 import com.ganzithon.wool.user.entity.AgeGroup;
 import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
@@ -11,15 +13,11 @@ import com.ganzithon.wool.worry.entity.WorryTag;
 import com.ganzithon.wool.worry.entity.WorryVisibility;
 import com.ganzithon.wool.worry.repository.WorryRepository;
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -34,13 +32,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Transactional
 class WorryUpdateControllerTest extends IntegrationTestSupport {
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository users;
     @Autowired private WorryRepository worries;
-    @Autowired private JdbcTemplate jdbc;
+    @Autowired private ReplyRepository replies;
     @Autowired private EntityManager entityManager;
     @MockitoBean private SolarClient solarClient;
     private User owner;
@@ -48,14 +45,13 @@ class WorryUpdateControllerTest extends IntegrationTestSupport {
     private User senior;
     private Worry worry;
 
-    @BeforeAll
-    void createRepliesTable() {
-        jdbc.execute("CREATE TABLE replies (id BIGINT PRIMARY KEY, worry_id BIGINT NOT NULL, hidden BOOLEAN NOT NULL, deleted_at TIMESTAMP NULL)");
-    }
-
-    @AfterAll
-    void dropRepliesTable() {
-        jdbc.execute("DROP TABLE replies");
+    // 어르신 한 명은 같은 고민에 한 번만 답장할 수 있어서 답장마다 다른 어르신을 만든다.
+    private void saveReply(String seniorNickname, boolean hidden, boolean deleted) {
+        User replier = users.saveAndFlush(User.join(Role.SENIOR, AgeGroup.AGE_60S, seniorNickname));
+        Reply reply = Reply.text(worry, replier, "답장");
+        if (hidden) reply.hide();
+        if (deleted) reply.delete();
+        replies.saveAndFlush(reply);
     }
 
     @BeforeEach
@@ -99,9 +95,9 @@ class WorryUpdateControllerTest extends IntegrationTestSupport {
 
     @Test
     void 삭제되거나_숨겨진_답장만_있으면_수정할_수_있다() throws Exception {
-        jdbc.update("INSERT INTO replies VALUES (1, ?, TRUE, NULL)", worry.getId());
-        jdbc.update("INSERT INTO replies VALUES (2, ?, FALSE, CURRENT_TIMESTAMP)", worry.getId());
-        jdbc.update("INSERT INTO replies VALUES (3, ?, TRUE, CURRENT_TIMESTAMP)", worry.getId());
+        saveReply("답장선배1", true, false);
+        saveReply("답장선배2", false, true);
+        saveReply("답장선배3", true, true);
         mockMvc.perform(request(owner.getId(), worry.getId(), "{\"title\":\"새 제목\"}"))
                 .andExpect(status().isOk());
         entityManager.clear();
@@ -110,9 +106,9 @@ class WorryUpdateControllerTest extends IntegrationTestSupport {
 
     @Test
     void 삭제되거나_숨겨지지_않은_답장이_하나라도_있으면_수정할_수_없다() throws Exception {
-        jdbc.update("INSERT INTO replies VALUES (1, ?, TRUE, NULL)", worry.getId());
-        jdbc.update("INSERT INTO replies VALUES (2, ?, FALSE, CURRENT_TIMESTAMP)", worry.getId());
-        jdbc.update("INSERT INTO replies VALUES (3, ?, FALSE, NULL)", worry.getId());
+        saveReply("답장선배1", true, false);
+        saveReply("답장선배2", false, true);
+        saveReply("답장선배3", false, false);
         mockMvc.perform(request(owner.getId(), worry.getId(), "{\"title\":\"새 제목\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("WORRY_409_002"));
         assertThat(worry.getTitle()).isEqualTo("제목");
