@@ -1,0 +1,26 @@
+name: branch-protection
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  check-base-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR source branch
+        run: |
+          echo "base branch: ${{ github.base_ref }}"
+          echo "head branch: ${{ github.head_ref }}"
+
+          # main으로의 PR은 develop 브랜치에서만 허용
+          if [ "${{ github.base_ref }}" = "main" ] && \
+             [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "main으로의 PR은 develop 브랜치에서만 가능합니다."
+            exit 1
+          fi
+
+          echo "브랜치 정책 검사를 통과했습니다."

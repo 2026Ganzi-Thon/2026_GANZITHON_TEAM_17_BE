@@ -52,3 +52,6 @@ Thumbs.db
 *.private.env.json
 
 logs/
+
+### 업로드한 파일 (로컬 저장소) ###
+uploads/

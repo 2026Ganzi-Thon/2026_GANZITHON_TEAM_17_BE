@@ -1,0 +1,13 @@
+build/
+.gradle/
+.idea/
+*.iml
+.git/
+.github/
+.env
+.env.*
+application-secret.yml
+application-secret.yaml
+uploads/
+review-*.md
+deploy/

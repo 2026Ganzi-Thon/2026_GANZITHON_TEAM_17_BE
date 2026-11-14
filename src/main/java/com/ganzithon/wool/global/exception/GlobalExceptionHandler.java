@@ -1,6 +1,7 @@
 package com.ganzithon.wool.global.exception;
 
 import com.ganzithon.wool.global.response.ApiResponse;
+import com.ganzithon.wool.upload.exception.UploadErrorCode;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.List;
@@ -47,6 +49,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         "reason", String.valueOf(fieldError.getDefaultMessage())))
                 .toList();
         return invalidInput(Map.of("errors", errors));
+    }
+
+    // 멀티파트 용량 상한(application.yml) 초과. 손편지 업로드의 용량 초과 응답과 같다.
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException exception,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request
+    ) {
+        return ResponseEntity
+                .status(UploadErrorCode.TOO_LARGE.getHttpStatus())
+                .body(ApiResponse.error(UploadErrorCode.TOO_LARGE));
     }
 
     // @RequestParam, @PathVariable 검증 실패 (Spring 6.1+의 메서드 파라미터 검증)

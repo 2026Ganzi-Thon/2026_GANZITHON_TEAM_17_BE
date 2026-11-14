@@ -1,0 +1,57 @@
+# 프론트엔드 등 백엔드 코드를 직접 건드리지 않는 사람이 로컬에서 API 서버만 띄우는 파일.
+# Java/MySQL 설치 없이 Docker만 있으면 된다. 여기 값은 전부 로컬 전용 더미값이라 그대로 커밋해도 된다.
+#
+# 사용법(이미지를 받아서 쓸 때): BE_IMAGE에 이미지 이름(예: 도커허브아이디/wool_be)을 주면 CD가 올린 최신 이미지를 쓴다.
+#   BE_IMAGE=도커허브아이디/wool_be docker compose -f compose.local.yml pull
+#   BE_IMAGE=도커허브아이디/wool_be docker compose -f compose.local.yml up -d
+# BE_IMAGE 없이 저장소에서 직접 빌드할 때:
+#   docker compose -f compose.local.yml up -d --build
+#   → http://localhost:8080/swagger-ui.html , 상태 확인 http://localhost:8080/api/health
+#
+# 주의: 운영 배포용이 아니다. (그건 compose.prod.yml)
+# 주의: GROQ_API_KEY는 더미라 음성 인식은 동작하지 않고, UPSTAGE_API_KEY가 비어 있어 위기 표현은 키워드 목록으로만 판단한다.
+#       나머지 API는 정상 동작한다.
+services:
+  app:
+    image: ${BE_IMAGE:-wool_be:local}
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: mysql
+      DB_NAME: wool
+      DB_USERNAME: wool
+      DB_PASSWORD: local_dev_password
+      GROQ_API_KEY: local-dev-dummy
+      FILE_STORAGE_DIR: /data/uploads
+    volumes:
+      - wool_local_uploads:/data/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: local_dev_root_password
+      MYSQL_DATABASE: wool
+      MYSQL_USER: wool
+      MYSQL_PASSWORD: local_dev_password
+      TZ: Asia/Seoul
+    volumes:
+      - wool_local_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysqladmin ping -uroot --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  wool_local_mysql:
+  wool_local_uploads:

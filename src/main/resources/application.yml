@@ -5,6 +5,28 @@ spring:
     import: optional:file:.env[.properties]
   profiles:
     active: local
+  jackson:
+    datatype:
+      enum:
+        # 열거형 자리에 숫자(순번)를 보내면 해당 순번의 값으로 통과하지 않고 400으로 거부한다. (예: {"reason": 1})
+        fail-on-numbers-for-enums: true
+  servlet:
+    multipart:
+      # 손편지 사진은 10MB까지. (서비스에서도 같은 값을 한 번 더 확인한다)
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+# 업로드한 파일을 저장하는 폴더. 운영에서는 FILE_STORAGE_DIR로 영구 볼륨 경로를 지정한다.
+file:
+  storage:
+    dir: ${FILE_STORAGE_DIR:./uploads}
+
+# 위기 표현 감지(Solar). 키가 비어 있으면 호출하지 않고 위기 키워드 목록으로만 판단한다.
+upstage:
+  api-key: ${UPSTAGE_API_KEY:}
+  base-url: https://api.upstage.ai/v1
+  model: solar-mini4
+  timeout: 3s
 
 ---
 spring:
