@@ -21,8 +21,6 @@ import com.ganzithon.wool.user.entity.User;
 import com.ganzithon.wool.worry.entity.Worry;
 import com.ganzithon.wool.worry.exception.WorryErrorCode;
 import com.ganzithon.wool.worry.repository.WorryRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +33,7 @@ import java.time.LocalDateTime;
 public class ReplyCreateService {
 
     private final WorryRepository worryRepository;
-    private final EntityManager entityManager;
+    private final SeniorLock seniorLock;
     private final ReplyRepository replyRepository;
     private final CertificateRepository certificateRepository;
     private final ContentFilter contentFilter;
@@ -58,7 +56,7 @@ public class ReplyCreateService {
             throw new BusinessException(WorryErrorCode.NOT_FOUND);
         }
         // 누적 답장 수 계산과 감사장 발급이 같은 어르신 기준으로 한 번에 하나씩 처리되게 한다.
-        User senior = lockSenior(requester.getId());
+        User senior = seniorLock.lock(requester.getId());
         // 잠금을 기다리는 동안 7일 제한이 풀렸을 수 있어서, 시각은 잠금을 잡은 뒤에 구한다.
         LocalDateTime now = LocalDateTime.now();
         if (senior.isReplyRestrictedAt(now)) {
@@ -82,17 +80,6 @@ public class ReplyCreateService {
         Long certificateId = issueCertificateIfDue(senior, totalReplies, now);
         return new CreateReplyResponse(reply.getId(), totalReplies, WoolStage.of(totalReplies),
                 certificateId != null, certificateId);
-    }
-
-    // 사용자 행을 잠그면서 DB의 최신 값으로 다시 읽는다. 이미 영속성 컨텍스트에 있는 엔티티는 잠금 조회만으로는 갱신되지 않고,
-    // MySQL 기본 격리 수준(REPEATABLE READ)에서는 일반 조회가 트랜잭션 시작 시점의 값을 돌려줄 수 있어서 잠금과 함께 refresh한다.
-    private User lockSenior(String seniorId) {
-        User user = entityManager.find(User.class, seniorId);
-        if (user == null) {
-            throw new BusinessException(CommonErrorCode.UNREGISTERED_USER);
-        }
-        entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
-        return user;
     }
 
     private Reply newReply(Worry worry, User senior, CreateReplyRequest request) {

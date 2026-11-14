@@ -1,11 +1,14 @@
 package com.ganzithon.wool.reply.repository;
 
 import com.ganzithon.wool.reply.entity.Reply;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ReplyRepository extends JpaRepository<Reply, Long> {
 
@@ -30,6 +33,11 @@ public interface ReplyRepository extends JpaRepository<Reply, Long> {
             + "from Reply r where r.worry.author.id = :authorId and r.worry.deletedAt is null and "
             + VISIBLE_REPLY + " group by r.worry.id")
     List<VisibleReplySummary> summarizeVisibleByAuthorId(@Param("authorId") String authorId);
+
+    // 답장 행을 잠그고 가져온다. 삭제된 답장은 없는 것으로 본다. 답장을 바꾸는 쪽(삭제·수정, 고마움·신고)이 같은 잠금을 써서
+    // "고마움을 받은 뒤 수정"이나 "삭제된 답장에 고마움"처럼 어긋난 결과가 생기지 않게 한다. 숨긴 답장도 가져온다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Reply> findByIdAndDeletedAtIsNull(Long id);
 
     // 공개 고민을 읽는 어르신에게 보여줄 다른 선배의 답장. 내 답장과 삭제·숨김 답장은 뺀다. 댓글처럼 오래된 순이다.
     @Query("select r from Reply r join fetch r.senior where r.worry.id = :worryId and r.senior.id <> :seniorId and "
