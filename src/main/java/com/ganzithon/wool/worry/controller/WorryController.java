@@ -1,6 +1,8 @@
 package com.ganzithon.wool.worry.controller;
 
 import com.ganzithon.wool.global.auth.LoginUser;
+import com.ganzithon.wool.global.exception.BusinessException;
+import com.ganzithon.wool.global.exception.CommonErrorCode;
 import com.ganzithon.wool.global.response.ApiResponse;
 import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
@@ -13,6 +15,9 @@ import com.ganzithon.wool.worry.response.DeleteWorryResponse;
 import com.ganzithon.wool.worry.response.MyWorryListResponse;
 import com.ganzithon.wool.worry.response.UpdateWorryResponse;
 import com.ganzithon.wool.worry.response.WorryResponseCode;
+import com.ganzithon.wool.worry.response.PublicWorryFeedResponse;
+import com.ganzithon.wool.worry.service.PublicWorryFeedService;
+import com.ganzithon.wool.worry.entity.WorryTag;
 import com.ganzithon.wool.worry.service.MyWorryListService;
 import com.ganzithon.wool.worry.service.WorryDeleteService;
 import com.ganzithon.wool.worry.service.WorryService;
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/worries")
@@ -39,6 +45,21 @@ public class WorryController {
     private final WorryVisibilityService worryVisibilityService;
     private final WorryDeleteService worryDeleteService;
     private final WorryUpdateService worryUpdateService;
+    private final PublicWorryFeedService publicWorryFeedService;
+
+    @GetMapping("/public")
+    public ResponseEntity<ApiResponse<PublicWorryFeedResponse>> publicFeed(
+            @LoginUser(Role.YOUTH) User user, @RequestParam(required = false) String tag) {
+        WorryTag parsedTag = null;
+        if (tag != null) {
+            try {
+                parsedTag = WorryTag.valueOf(tag);
+            } catch (IllegalArgumentException exception) {
+                throw new BusinessException(CommonErrorCode.INVALID_INPUT);
+            }
+        }
+        return ApiResponse.of(WorryResponseCode.PUBLIC_FEED, publicWorryFeedService.find(parsedTag)).toResponseEntity();
+    }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<MyWorryListResponse>> myWorries(@LoginUser(Role.YOUTH) User user) {
