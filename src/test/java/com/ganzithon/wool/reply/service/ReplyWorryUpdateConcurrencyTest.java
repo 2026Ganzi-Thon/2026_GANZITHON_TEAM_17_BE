@@ -1,5 +1,6 @@
 package com.ganzithon.wool.reply.service;
 
+import com.ganzithon.wool.DatabaseCleaner;
 import com.ganzithon.wool.IntegrationTestSupport;
 import com.ganzithon.wool.global.exception.BusinessException;
 import com.ganzithon.wool.reply.entity.ReplyType;
@@ -18,6 +19,7 @@ import com.ganzithon.wool.worry.request.UpdateWorryRequest;
 import com.ganzithon.wool.worry.service.WorryUpdateService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -55,6 +57,12 @@ class ReplyWorryUpdateConcurrencyTest extends IntegrationTestSupport {
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private DatabaseCleaner databaseCleaner;
+
+    @AfterEach
+    void cleanUp() {
+        databaseCleaner.clean();
+    }
 
     private static String name(String prefix) {
         return prefix + UUID.randomUUID().toString().substring(0, 6);
