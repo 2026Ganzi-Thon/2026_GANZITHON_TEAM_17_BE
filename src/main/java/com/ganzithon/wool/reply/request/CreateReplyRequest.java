@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ganzithon.wool.global.json.StrictStringDeserializer;
 import com.ganzithon.wool.reply.entity.Reply;
 import com.ganzithon.wool.reply.entity.ReplyType;
+import com.ganzithon.wool.upload.service.LetterImageUrl;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import tools.jackson.databind.annotation.JsonDeserialize;
@@ -24,8 +25,8 @@ public record CreateReplyRequest(
             return true; // type 누락은 @NotNull이 알린다.
         }
         if (type == ReplyType.LETTER) {
-            return content == null && imageUrl != null && !imageUrl.isBlank()
-                    && length(imageUrl) <= Reply.IMAGE_URL_MAX_LENGTH;
+            // 손편지 업로드(REPLY-004)가 돌려준 주소만 받는다. 임의의 외부 주소를 답장에 담지 못하게 한다.
+            return content == null && LetterImageUrl.isValid(imageUrl);
         }
         return imageUrl == null && content != null && !content.isBlank()
                 && length(content) <= Reply.CONTENT_MAX_LENGTH;

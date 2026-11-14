@@ -5,6 +5,16 @@ spring:
     import: optional:file:.env[.properties]
   profiles:
     active: local
+  servlet:
+    multipart:
+      # 손편지 사진은 10MB까지. (서비스에서도 같은 값을 한 번 더 확인한다)
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+# 업로드한 파일을 저장하는 폴더. 운영에서는 FILE_STORAGE_DIR로 영구 볼륨 경로를 지정한다.
+file:
+  storage:
+    dir: ${FILE_STORAGE_DIR:./uploads}
 
 # 위기 표현 감지(Solar). 키가 비어 있으면 호출하지 않고 위기 키워드 목록으로만 판단한다.
 upstage:
