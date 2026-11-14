@@ -17,11 +17,13 @@ import com.ganzithon.wool.worry.response.MyWorryListResponse;
 import com.ganzithon.wool.worry.response.PublicWorryFeedResponse;
 import com.ganzithon.wool.worry.response.UpdateWorryResponse;
 import com.ganzithon.wool.worry.response.WorryDetailResponse;
+import com.ganzithon.wool.worry.response.WorryLikeResponse;
 import com.ganzithon.wool.worry.response.WorryResponseCode;
 import com.ganzithon.wool.worry.service.MyWorryListService;
 import com.ganzithon.wool.worry.service.PublicWorryFeedService;
 import com.ganzithon.wool.worry.service.WorryDeleteService;
 import com.ganzithon.wool.worry.service.WorryDetailService;
+import com.ganzithon.wool.worry.service.WorryLikeService;
 import com.ganzithon.wool.worry.service.WorryService;
 import com.ganzithon.wool.worry.service.WorryUpdateService;
 import com.ganzithon.wool.worry.service.WorryVisibilityService;
@@ -49,6 +51,14 @@ public class WorryController {
     private final WorryUpdateService worryUpdateService;
     private final PublicWorryFeedService publicWorryFeedService;
     private final WorryDetailService worryDetailService;
+    private final WorryLikeService worryLikeService;
+
+    @PostMapping("/{worryId}/likes")
+    public ResponseEntity<ApiResponse<WorryLikeResponse>> toggleLike(
+            @LoginUser(Role.YOUTH) User user, @PathVariable Long worryId) {
+        return ApiResponse.of(WorryResponseCode.LIKE_TOGGLED,
+                worryLikeService.toggle(user.getId(), worryId)).toResponseEntity();
+    }
 
     @GetMapping("/{worryId}")
     public ResponseEntity<ApiResponse<WorryDetailResponse>> detail(
