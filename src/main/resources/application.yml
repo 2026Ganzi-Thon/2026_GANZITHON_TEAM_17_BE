@@ -5,6 +5,11 @@ spring:
     import: optional:file:.env[.properties]
   profiles:
     active: local
+  jackson:
+    datatype:
+      enum:
+        # 열거형 자리에 숫자(순번)를 보내면 해당 순번의 값으로 통과하지 않고 400으로 거부한다. (예: {"reason": 1})
+        fail-on-numbers-for-enums: true
   servlet:
     multipart:
       # 손편지 사진은 10MB까지. (서비스에서도 같은 값을 한 번 더 확인한다)

@@ -8,10 +8,16 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JacksonConfigTest extends IntegrationTestSupport {
 
     record Sample(LocalDateTime createdAt) {
+    }
+
+    enum Color { RED, BLUE }
+
+    record Paint(Color color) {
     }
 
     @Autowired
@@ -37,5 +43,13 @@ class JacksonConfigTest extends IntegrationTestSupport {
         String json = jsonMapper.writeValueAsString(new Sample(LocalDateTime.of(2026, 12, 31, 23, 59, 59)));
 
         assertThat(json).isEqualTo("{\"createdAt\":\"2026-12-31T23:59:59+09:00\"}");
+    }
+
+    @Test
+    void 열거형에_이름은_받고_숫자는_받지_않는다() {
+        assertThat(jsonMapper.readValue("{\"color\":\"BLUE\"}", Paint.class).color()).isEqualTo(Color.BLUE);
+
+        assertThatThrownBy(() -> jsonMapper.readValue("{\"color\":1}", Paint.class))
+                .isInstanceOf(RuntimeException.class);
     }
 }
