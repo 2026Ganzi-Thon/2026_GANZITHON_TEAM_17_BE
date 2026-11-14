@@ -1,0 +1,52 @@
+name: CD
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# 겹치는 배포가 순서 뒤바뀌어 실행되어도 최신 배포를 덮어쓰지 않도록 직렬화한다.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 — 시크릿 다루는 잡 앞단이라 SHA 고정
+        with:
+          persist-credentials: false
+      - name: Compute image name
+        id: image
+        run: echo "name=${{ secrets.DOCKERHUB_USERNAME }}/wool_be" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0 — 시크릿 다루는 서드파티 액션이라 SHA 고정
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5 — 로그인 이후 실행되고 자격증명에 접근 가능한 서드파티 액션이라 SHA 고정
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:latest
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+
+  # 운영 EC2에 설치한 self-hosted 러너(라벨 ec2-prod)에서 실행한다. 러너가 없으면 이 잡은 대기 상태로 남는다.
+  # Docker Hub 저장소는 Public이어야 한다. (EC2의 pull은 로그인하지 않는다. deploy/README.md 참고)
+  deploy:
+    needs: build-and-push
+    runs-on: [self-hosted, ec2-prod]
+    steps:
+      # 서버에 예전부터 놓여 있던 파일이 아니라, 이 커밋 시점의 compose.prod.yml과 Caddyfile을 쓴다.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 — deploy job은 운영 서버 접근 권한이 있는 self-hosted 러너에서 실행되어 SHA 고정
+        with:
+          persist-credentials: false
+      - name: Deploy (새 앱 이미지로 교체하고 healthy 될 때까지 대기, 실패하면 이전 이미지로 롤백)
+        env:
+          # 시크릿 값이 들어간 잡 출력은 GitHub가 다음 잡으로 넘기지 않으므로, 여기서 시크릿으로 직접 만든다.
+          BE_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/wool_be
+          IMAGE_TAG: ${{ github.sha }}
+          WORKSPACE: ${{ github.workspace }}
+        run: bash "$GITHUB_WORKSPACE/deploy/deploy.sh"
