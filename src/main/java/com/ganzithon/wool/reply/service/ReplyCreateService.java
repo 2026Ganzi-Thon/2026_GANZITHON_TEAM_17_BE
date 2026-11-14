@@ -23,6 +23,7 @@ import com.ganzithon.wool.worry.exception.WorryErrorCode;
 import com.ganzithon.wool.worry.repository.WorryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -42,7 +43,10 @@ public class ReplyCreateService {
 
     // requester는 @LoginUser가 요청 시작 때 읽은 사용자다. 제재 상태가 그 사이 바뀌었을 수 있어서 id만 쓰고,
     // 잠금을 잡은 뒤 다시 읽은 최신 상태(senior)로 판단한다.
-    @Transactional
+    // 어르신의 누적 답장 수와 감사장 기준을 잠금을 잡은 뒤에 읽으므로 READ COMMITTED로 실행한다.
+    // MySQL 기본(REPEATABLE READ)에서는 트랜잭션의 첫 일반 조회가 그 시점의 스냅샷을 만들어서, 잠금을 기다린 뒤에도
+    // 다른 트랜잭션이 그 사이 커밋한 답장·신고를 못 보는 오래된 수를 읽을 수 있다. READ COMMITTED는 조회마다 최신 커밋을 본다.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CreateReplyResponse create(User requester, Long worryId, CreateReplyRequest request) {
         // 손편지는 업로드 API가 실제로 저장한 사진만 받는다. 형식만 맞는 가짜 주소는 잠금을 잡기 전에 돌려보낸다.
         if (request.type() == ReplyType.LETTER && !fileStorage.exists(request.imageUrl())) {

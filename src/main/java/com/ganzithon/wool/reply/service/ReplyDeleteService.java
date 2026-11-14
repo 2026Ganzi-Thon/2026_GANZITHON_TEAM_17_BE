@@ -8,6 +8,7 @@ import com.ganzithon.wool.reply.response.DeleteReplyResponse;
 import com.ganzithon.wool.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 // 답장 삭제(REPLY-007). 소프트 삭제이고 복구하지 않는다.
@@ -21,7 +22,10 @@ public class ReplyDeleteService {
     private final ReplyRepository replyRepository;
     private final SeniorLock seniorLock;
 
-    @Transactional
+    // 어르신의 누적 답장 수와 감사장 기준을 잠금을 잡은 뒤에 읽으므로 READ COMMITTED로 실행한다.
+    // MySQL 기본(REPEATABLE READ)에서는 트랜잭션의 첫 일반 조회가 그 시점의 스냅샷을 만들어서, 잠금을 기다린 뒤에도
+    // 다른 트랜잭션이 그 사이 커밋한 답장·신고를 못 보는 오래된 수를 읽을 수 있다. READ COMMITTED는 조회마다 최신 커밋을 본다.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public DeleteReplyResponse delete(User senior, Long replyId) {
         // 답장 행을 잠근 뒤 판단한다. 같은 답장에 대한 수정, 고마움, 신고가 동시에 들어와도 한쪽씩 처리된다.
         Reply reply = replyRepository.findByIdAndDeletedAtIsNull(replyId)
