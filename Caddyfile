@@ -1,0 +1,7 @@
+# HTTPS를 붙여 프론트(HTTPS)가 백엔드를 호출할 수 있게 한다.
+# 도메인을 사지 않으면 sslip.io(IP를 도메인으로 바꿔 주는 무료 서비스)를 쓴다. 예: 13-124-27-143.sslip.io → 13.124.27.143
+# Let's Encrypt가 정상 인증서를 발급하므로 Caddy가 자동으로 받아 온다. EC2의 IP가 바뀌면 이 주소도 바뀌므로 Elastic IP를 붙여 둔다.
+# 주소는 저장소에 적지 않고 서버의 .env에 DOMAIN으로 둔다. (compose가 Caddy 컨테이너에 환경변수로 넘긴다)
+{$DOMAIN} {
+    reverse_proxy app:8080
+}
