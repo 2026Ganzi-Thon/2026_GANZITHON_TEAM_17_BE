@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum WorryErrorCode implements ErrorCode {
+    FORBIDDEN_VIEW(HttpStatus.FORBIDDEN, "WORRY_403_001", "볼 수 없는 고민입니다."),
     FORBIDDEN_CHANGE(HttpStatus.FORBIDDEN, "WORRY_403_002", "내 고민만 변경할 수 있습니다."),
     FORBIDDEN_DELETE(HttpStatus.FORBIDDEN, "WORRY_403_003", "삭제할 권한이 없습니다."),
     FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "WORRY_403_004", "수정할 권한이 없습니다."),

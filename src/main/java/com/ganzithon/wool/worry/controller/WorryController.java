@@ -6,6 +6,7 @@ import com.ganzithon.wool.global.exception.CommonErrorCode;
 import com.ganzithon.wool.global.response.ApiResponse;
 import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
+import com.ganzithon.wool.worry.entity.WorryTag;
 import com.ganzithon.wool.worry.request.ChangeVisibilityRequest;
 import com.ganzithon.wool.worry.request.CreateWorryRequest;
 import com.ganzithon.wool.worry.request.UpdateWorryRequest;
@@ -13,13 +14,14 @@ import com.ganzithon.wool.worry.response.ChangeVisibilityResponse;
 import com.ganzithon.wool.worry.response.CreateWorryResponse;
 import com.ganzithon.wool.worry.response.DeleteWorryResponse;
 import com.ganzithon.wool.worry.response.MyWorryListResponse;
-import com.ganzithon.wool.worry.response.UpdateWorryResponse;
-import com.ganzithon.wool.worry.response.WorryResponseCode;
 import com.ganzithon.wool.worry.response.PublicWorryFeedResponse;
-import com.ganzithon.wool.worry.service.PublicWorryFeedService;
-import com.ganzithon.wool.worry.entity.WorryTag;
+import com.ganzithon.wool.worry.response.UpdateWorryResponse;
+import com.ganzithon.wool.worry.response.WorryDetailResponse;
+import com.ganzithon.wool.worry.response.WorryResponseCode;
 import com.ganzithon.wool.worry.service.MyWorryListService;
+import com.ganzithon.wool.worry.service.PublicWorryFeedService;
 import com.ganzithon.wool.worry.service.WorryDeleteService;
+import com.ganzithon.wool.worry.service.WorryDetailService;
 import com.ganzithon.wool.worry.service.WorryService;
 import com.ganzithon.wool.worry.service.WorryUpdateService;
 import com.ganzithon.wool.worry.service.WorryVisibilityService;
@@ -33,8 +35,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/worries")
@@ -46,6 +48,13 @@ public class WorryController {
     private final WorryDeleteService worryDeleteService;
     private final WorryUpdateService worryUpdateService;
     private final PublicWorryFeedService publicWorryFeedService;
+    private final WorryDetailService worryDetailService;
+
+    @GetMapping("/{worryId}")
+    public ResponseEntity<ApiResponse<WorryDetailResponse>> detail(
+            @LoginUser(Role.YOUTH) User user, @PathVariable Long worryId) {
+        return ApiResponse.of(WorryResponseCode.DETAIL, worryDetailService.find(user.getId(), worryId)).toResponseEntity();
+    }
 
     @GetMapping("/public")
     public ResponseEntity<ApiResponse<PublicWorryFeedResponse>> publicFeed(

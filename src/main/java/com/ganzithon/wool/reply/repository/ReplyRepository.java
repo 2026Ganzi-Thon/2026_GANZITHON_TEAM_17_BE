@@ -44,6 +44,10 @@ public interface ReplyRepository extends JpaRepository<Reply, Long> {
             + VISIBLE_REPLY + " order by r.createdAt asc, r.id asc")
     List<Reply> findVisibleByWorryIdExcludingSenior(@Param("worryId") Long worryId, @Param("seniorId") String seniorId);
 
+    @Query("select r from Reply r join fetch r.senior where r.worry.id = :worryId and "
+            + VISIBLE_REPLY + " order by r.createdAt asc, r.id asc")
+    List<Reply> findVisibleByWorryId(@Param("worryId") Long worryId);
+
     // 어르신의 누적 답장 수. 털 단계와 감사장 발급 기준이며, 숨김·삭제 답장은 제외한다. (POL-WOL-01)
     @Query("select count(r) from Reply r where r.senior.id = :seniorId and r.hidden = false and r.deletedAt is null")
     long countVisibleBySeniorId(@Param("seniorId") String seniorId);
