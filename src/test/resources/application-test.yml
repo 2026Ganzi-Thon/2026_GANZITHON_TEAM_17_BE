@@ -9,3 +9,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+wool:
+  scheduling:
+    # 스케줄러는 테스트에서 직접 호출한다. 켜 두면 공유 H2의 다른 테스트 데이터를 건드릴 수 있다.
+    enabled: false
