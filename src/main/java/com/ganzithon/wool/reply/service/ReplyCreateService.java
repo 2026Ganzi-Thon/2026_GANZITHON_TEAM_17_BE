@@ -5,6 +5,7 @@ import com.ganzithon.wool.certificate.repository.CertificateRepository;
 import com.ganzithon.wool.filter.service.ContentFilter;
 import com.ganzithon.wool.global.exception.BusinessException;
 import com.ganzithon.wool.global.exception.CommonErrorCode;
+import com.ganzithon.wool.global.storage.FileStorage;
 import com.ganzithon.wool.notification.entity.NotificationType;
 import com.ganzithon.wool.notification.entity.TargetKind;
 import com.ganzithon.wool.notification.service.NotificationService;
@@ -38,12 +39,18 @@ public class ReplyCreateService {
     private final ReplyRepository replyRepository;
     private final CertificateRepository certificateRepository;
     private final ContentFilter contentFilter;
+    private final FileStorage fileStorage;
     private final NotificationService notificationService;
 
     // requester는 @LoginUser가 요청 시작 때 읽은 사용자다. 제재 상태가 그 사이 바뀌었을 수 있어서 id만 쓰고,
     // 잠금을 잡은 뒤 다시 읽은 최신 상태(senior)로 판단한다.
     @Transactional
     public CreateReplyResponse create(User requester, Long worryId, CreateReplyRequest request) {
+        // 손편지는 업로드 API가 실제로 저장한 사진만 받는다. 형식만 맞는 가짜 주소는 잠금을 잡기 전에 돌려보낸다.
+        if (request.type() == ReplyType.LETTER && !fileStorage.exists(request.imageUrl())) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT);
+        }
+
         // 고민 수정(WorryUpdateTransaction)과 같은 고민 잠금을 써서, 수정과 답장 등록이 동시에 들어와도 어긋나지 않게 한다.
         Worry worry = worryRepository.findByIdAndDeletedAtIsNull(worryId)
                 .orElseThrow(() -> new BusinessException(WorryErrorCode.NOT_FOUND));

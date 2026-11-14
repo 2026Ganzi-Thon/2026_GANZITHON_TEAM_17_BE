@@ -8,6 +8,7 @@ import com.ganzithon.wool.notification.entity.NotificationType;
 import com.ganzithon.wool.notification.entity.TargetKind;
 import com.ganzithon.wool.notification.repository.NotificationRepository;
 import com.ganzithon.wool.global.exception.BusinessException;
+import com.ganzithon.wool.global.storage.FileStorage;
 import com.ganzithon.wool.reply.entity.Reply;
 import com.ganzithon.wool.reply.entity.ReplyType;
 import com.ganzithon.wool.reply.exception.ReplyErrorCode;
@@ -24,17 +25,21 @@ import com.ganzithon.wool.worry.entity.WorryTag;
 import com.ganzithon.wool.worry.entity.WorryVisibility;
 import com.ganzithon.wool.worry.repository.WorryRepository;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.FileSystemUtils;
 
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -57,6 +62,11 @@ class ReplyCreateControllerTest extends IntegrationTestSupport {
     @Autowired private NotificationRepository notifications;
     @Autowired private EntityManager entityManager;
     @Autowired private ReplyCreateService replyCreateService;
+    @Autowired private FileStorage fileStorage;
+    @Value("${file.storage.dir}") private String storageDir;
+
+    // 업로드 API가 실제로 저장한 사진처럼 파일을 하나 만들어 두고 그 주소를 쓴다.
+    private String letterUrl;
 
     private User youth;
     private User senior;
@@ -98,8 +108,14 @@ class ReplyCreateControllerTest extends IntegrationTestSupport {
         return "{\"type\":\"TEXT\",\"content\":\"" + content + "\"}";
     }
 
+    @AfterEach
+    void removeLetterFiles() throws Exception {
+        FileSystemUtils.deleteRecursively(Path.of(storageDir).toAbsolutePath().resolve("letters"));
+    }
+
     @BeforeEach
     void setUp() {
+        letterUrl = fileStorage.save("letters", UUID.randomUUID() + ".png", new byte[]{(byte) 0x89, 'P', 'N', 'G'});
         youth = newUser(Role.YOUTH, "청년");
         senior = newUser(Role.SENIOR, "선배");
         worry = newWorry(youth);
@@ -141,7 +157,7 @@ class ReplyCreateControllerTest extends IntegrationTestSupport {
 
     @Test
     void 손편지_답장은_이미지_주소만_저장하고_본문은_없다() throws Exception {
-        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"https://example.com/letter.png\"}")
+        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"" + letterUrl + "\"}")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.totalReplies").value(1));
 
@@ -149,7 +165,7 @@ class ReplyCreateControllerTest extends IntegrationTestSupport {
         Reply saved = replies.findAll().stream().filter(r -> r.getWorry().getId().equals(worry.getId())).findFirst().orElseThrow();
         assertThat(saved.getType()).isEqualTo(ReplyType.LETTER);
         assertThat(saved.getContent()).isNull();
-        assertThat(saved.getImageUrl()).isEqualTo("https://example.com/letter.png");
+        assertThat(saved.getImageUrl()).isEqualTo(letterUrl);
     }
 
     @Test
@@ -162,7 +178,7 @@ class ReplyCreateControllerTest extends IntegrationTestSupport {
     @Test
     void 손편지에는_금지어_검사를_하지_않는다() throws Exception {
         // 이미지 주소는 사람이 쓴 글이 아니라 업로드 결과다. 검사 대상은 글·말 답장의 content뿐이다.
-        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"https://example.com/x.png\"}")
+        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"" + letterUrl + "\"}")
                 .andExpect(status().isCreated());
     }
 
@@ -474,13 +490,33 @@ class ReplyCreateControllerTest extends IntegrationTestSupport {
     }
 
     @Test
-    void 손편지_이미지_주소는_500자까지_허용한다() throws Exception {
-        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"" + "a".repeat(500) + "\"}")
-                .andExpect(status().isCreated());
+    void 형식은_맞아도_실제로_올리지_않은_사진_주소는_400이고_저장하지_않는다() throws Exception {
+        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"/files/letters/00000000-0000-4000-8000-000000000000.jpg\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
 
-        Worry other = newWorry(youth);
-        send(senior, other.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"" + "a".repeat(501) + "\"}")
-                .andExpect(status().isBadRequest());
+        assertThat(replies.countVisibleByWorryId(worry.getId())).isZero();
+        assertThat(notifications.findByUserIdOrderByCreatedAtDescIdDesc(youth.getId())).isEmpty();
+    }
+
+    // 손편지 업로드(REPLY-004)가 돌려준 형태의 주소만 받는다.
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "https://example.com/letter.png",
+            "http://evil.example/files/letters/3f2b8c1e-5a47-4e0b-9c1d-7a6e2f4b9d10.png",
+            "/files/letters/../../etc/passwd",
+            "/files/letters/3f2b8c1e-5a47-4e0b-9c1d-7a6e2f4b9d10.gif",
+            "/files/letters/3f2b8c1e-5a47-4e0b-9c1d-7a6e2f4b9d10.png?x=1",
+            "/files/letters/3F2B8C1E-5A47-4E0B-9C1D-7A6E2F4B9D10.png",
+            "/files/letters/not-a-uuid.png",
+            "/files/other/3f2b8c1e-5a47-4e0b-9c1d-7a6e2f4b9d10.png",
+            " /files/letters/3f2b8c1e-5a47-4e0b-9c1d-7a6e2f4b9d10.png"
+    })
+    void 손편지는_우리가_올린_주소가_아니면_400이다(String imageUrl) throws Exception {
+        send(senior, worry.getId(), "{\"type\":\"LETTER\",\"imageUrl\":\"" + imageUrl + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+        assertThat(replies.countVisibleByWorryId(worry.getId())).isZero();
     }
 
     // ---------- 내용 검사 422 ----------
