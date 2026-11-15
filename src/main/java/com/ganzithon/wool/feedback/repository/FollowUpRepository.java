@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface FollowUpRepository extends JpaRepository<FollowUp, Long> {
     boolean existsByReplyId(Long replyId);
+    java.util.Optional<FollowUp> findByReplyId(Long replyId);
     @Modifying
     @Query("update FollowUp f set f.visibility = com.ganzithon.wool.worry.entity.WorryVisibility.SENIORS_ONLY where f.reply.worry.id = :worryId")
     int makePrivateByWorryId(@Param("worryId") Long worryId);

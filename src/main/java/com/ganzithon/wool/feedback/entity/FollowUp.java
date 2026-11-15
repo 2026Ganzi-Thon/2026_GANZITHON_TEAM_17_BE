@@ -29,6 +29,10 @@ public class FollowUp extends BaseCreatedEntity {
     @Column(nullable = false, length = 1000) private String content;
     @Enumerated(EnumType.STRING) @Column(nullable = false, columnDefinition = "ENUM('SENIORS_ONLY', 'PUBLIC')") private WorryVisibility visibility;
     @Column(name = "read_by_senior", nullable = false) private boolean readBySenior;
+    public void makeSeniorsOnly() {
+        this.visibility = WorryVisibility.SENIORS_ONLY;
+    }
+
     public static FollowUp of(Reply reply, String content, WorryVisibility visibility) {
         FollowUp result = new FollowUp();
         result.reply = reply; result.content = content; result.visibility = visibility;

@@ -1,6 +1,8 @@
 package com.ganzithon.wool.feedback.controller;
 
 import com.ganzithon.wool.feedback.request.CreateFollowUpRequest;
+import com.ganzithon.wool.feedback.request.ChangeFollowUpVisibilityRequest;
+import com.ganzithon.wool.feedback.response.ChangeFollowUpVisibilityResponse;
 import com.ganzithon.wool.feedback.response.CreateFollowUpResponse;
 import com.ganzithon.wool.feedback.response.FollowUpResponseCode;
 import com.ganzithon.wool.feedback.service.FollowUpService;
@@ -12,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,4 +30,12 @@ public class FollowUpController {
             @PathVariable Long replyId, @Valid @RequestBody CreateFollowUpRequest request) {
         return ApiResponse.of(FollowUpResponseCode.CREATED, service.create(user.getId(), replyId, request)).toResponseEntity();
     }
+    @PatchMapping("/visibility")
+    public ResponseEntity<ApiResponse<ChangeFollowUpVisibilityResponse>> changeVisibility(
+            @LoginUser(Role.YOUTH) User user, @PathVariable Long replyId,
+            @Valid @RequestBody ChangeFollowUpVisibilityRequest request) {
+        return ApiResponse.of(FollowUpResponseCode.VISIBILITY_CHANGED,
+                service.changeVisibility(user.getId(), replyId, request.visibility())).toResponseEntity();
+    }
+
 }
