@@ -1,5 +1,6 @@
 package com.ganzithon.wool.worry.service;
 
+import com.ganzithon.wool.feedback.repository.FollowUpRepository;
 import com.ganzithon.wool.global.exception.BusinessException;
 import com.ganzithon.wool.global.exception.CommonErrorCode;
 import com.ganzithon.wool.worry.entity.Worry;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WorryVisibilityService {
     private final WorryRepository worryRepository;
+    private final FollowUpRepository followUps;
 
     @Transactional
     public ChangeVisibilityResponse change(String userId, Long worryId, WorryVisibility visibility) {
@@ -33,6 +35,7 @@ public class WorryVisibilityService {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT);
         }
         worry.makeSeniorsOnly();
+        followUps.makePrivateByWorryId(worryId);
         return new ChangeVisibilityResponse(worry.getId(), worry.getVisibility());
     }
 }
