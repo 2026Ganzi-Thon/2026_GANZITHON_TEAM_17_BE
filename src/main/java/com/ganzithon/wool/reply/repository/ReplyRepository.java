@@ -12,6 +12,9 @@ import java.util.Optional;
 
 public interface ReplyRepository extends JpaRepository<Reply, Long> {
 
+    @Query("select r.worry.id from Reply r where r.id = :replyId and r.deletedAt is null")
+    Optional<Long> findWorryIdForLike(@Param("replyId") Long replyId);
+
     // "유효 답장" = 삭제되지 않았고 신고로 숨겨지지 않은 답장. 화면에 보이는 답장 수, 고민 수정 가능 여부,
     // 어르신 목록의 0통 정렬이 모두 이 정의를 쓴다.
     String VISIBLE_REPLY = "r.hidden = false and r.deletedAt is null";
