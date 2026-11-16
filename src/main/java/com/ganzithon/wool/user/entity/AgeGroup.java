@@ -17,7 +17,8 @@ public enum AgeGroup {
     AGE_40S("40S"),
     AGE_50S("50S"),
     AGE_60S("60S"),
-    AGE_70S_PLUS("70S_PLUS");
+    AGE_70S("70S"),
+    AGE_80S_PLUS("80S_PLUS");
 
     private final String value;
 

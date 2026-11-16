@@ -6,8 +6,10 @@ import com.ganzithon.wool.reply.request.CreateReplyRequest;
 import com.ganzithon.wool.reply.response.CreateReplyResponse;
 import com.ganzithon.wool.reply.response.DeleteReplyResponse;
 import com.ganzithon.wool.reply.response.ReplyResponseCode;
+import com.ganzithon.wool.reply.response.ReplyLikeResponse;
 import com.ganzithon.wool.reply.service.ReplyCreateService;
 import com.ganzithon.wool.reply.service.ReplyDeleteService;
+import com.ganzithon.wool.reply.service.ReplyLikeService;
 import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
 import jakarta.validation.Valid;
@@ -27,6 +29,13 @@ public class ReplyController {
 
     private final ReplyCreateService replyCreateService;
     private final ReplyDeleteService replyDeleteService;
+    private final ReplyLikeService replyLikeService;
+
+    @PostMapping("/replies/{replyId}/likes")
+    public ResponseEntity<ApiResponse<ReplyLikeResponse>> toggleLike(
+            @LoginUser(Role.YOUTH) User user, @PathVariable Long replyId) {
+        return ApiResponse.of(ReplyResponseCode.LIKE_TOGGLED, replyLikeService.toggle(user.getId(), replyId)).toResponseEntity();
+    }
 
     // REPLY-005 답장 작성
     @PostMapping("/worries/{worryId}/replies")

@@ -12,6 +12,9 @@ import java.util.Optional;
 
 public interface ReplyRepository extends JpaRepository<Reply, Long> {
 
+    @Query("select r.worry.id from Reply r where r.id = :replyId and r.deletedAt is null")
+    Optional<Long> findWorryIdForLike(@Param("replyId") Long replyId);
+
     // "유효 답장" = 삭제되지 않았고 신고로 숨겨지지 않은 답장. 화면에 보이는 답장 수, 고민 수정 가능 여부,
     // 어르신 목록의 0통 정렬이 모두 이 정의를 쓴다.
     String VISIBLE_REPLY = "r.hidden = false and r.deletedAt is null";
@@ -43,6 +46,10 @@ public interface ReplyRepository extends JpaRepository<Reply, Long> {
     @Query("select r from Reply r join fetch r.senior where r.worry.id = :worryId and r.senior.id <> :seniorId and "
             + VISIBLE_REPLY + " order by r.createdAt asc, r.id asc")
     List<Reply> findVisibleByWorryIdExcludingSenior(@Param("worryId") Long worryId, @Param("seniorId") String seniorId);
+
+    @Query("select r from Reply r join fetch r.senior where r.worry.id = :worryId and "
+            + VISIBLE_REPLY + " order by r.createdAt asc, r.id asc")
+    List<Reply> findVisibleByWorryId(@Param("worryId") Long worryId);
 
     // 어르신의 누적 답장 수. 털 단계와 감사장 발급 기준이며, 숨김·삭제 답장은 제외한다. (POL-WOL-01)
     @Query("select count(r) from Reply r where r.senior.id = :seniorId and r.hidden = false and r.deletedAt is null")

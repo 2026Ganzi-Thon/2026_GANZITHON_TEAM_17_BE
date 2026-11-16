@@ -44,13 +44,13 @@ class MyInfoControllerTest extends IntegrationTestSupport {
 
     @Test
     void 어르신의_제한_상태와_해제_시각을_반환한다() throws Exception {
-        User user = User.join(Role.SENIOR, AgeGroup.AGE_70S_PLUS, "조회선배");
+        User user = User.join(Role.SENIOR, AgeGroup.AGE_80S_PLUS, "조회선배");
         user.applySanction(SanctionLevel.RESTRICTED, LocalDateTime.of(2026, 11, 20, 12, 30));
         userRepository.saveAndFlush(user);
         mockMvc.perform(get("/api/users/me").header("X-User-Id", user.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.role").value("SENIOR"))
-                .andExpect(jsonPath("$.data.ageGroup").value("70S_PLUS"))
+                .andExpect(jsonPath("$.data.ageGroup").value("80S_PLUS"))
                 .andExpect(jsonPath("$.data.sanction.level").value("RESTRICTED"))
                 .andExpect(jsonPath("$.data.sanction.restrictedUntil").value(endsWith("+09:00")));
     }

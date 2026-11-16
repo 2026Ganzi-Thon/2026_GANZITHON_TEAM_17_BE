@@ -96,7 +96,7 @@ class SeniorWorryControllerTest extends IntegrationTestSupport {
     void setUp() {
         youth = newUser(Role.YOUTH, AgeGroup.AGE_20S, "청년");
         senior = newUser(Role.SENIOR, AgeGroup.AGE_60S, "선배");
-        other = newUser(Role.SENIOR, AgeGroup.AGE_70S_PLUS, "다른선배");
+        other = newUser(Role.SENIOR, AgeGroup.AGE_80S_PLUS, "다른선배");
     }
 
     // ================= REPLY-002 목록 =================
@@ -295,7 +295,7 @@ class SeniorWorryControllerTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.data.otherReplies[0].senior.ageGroup").value("50S"))
                 .andExpect(jsonPath("$.data.otherReplies[0].createdAt").exists())
                 .andExpect(jsonPath("$.data.otherReplies[1].replyId").value(first.getId()))
-                .andExpect(jsonPath("$.data.otherReplies[1].senior.ageGroup").value("70S_PLUS"));
+                .andExpect(jsonPath("$.data.otherReplies[1].senior.ageGroup").value("80S_PLUS"));
     }
 
     @Test
