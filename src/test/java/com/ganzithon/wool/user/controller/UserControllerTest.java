@@ -42,14 +42,14 @@ class UserControllerTest extends IntegrationTestSupport {
     @Test
     void 가입하면_201과_발급된_사용자_정보를_래퍼로_내려준다() throws Exception {
         mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"SENIOR\",\"ageGroup\":\"70S_PLUS\"}"))
+                        .content("{\"role\":\"SENIOR\",\"ageGroup\":\"80S_PLUS\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(201))
                 .andExpect(jsonPath("$.code").value("USER_201_1"))
                 .andExpect(jsonPath("$.message").value("가입에 성공했습니다."))
                 .andExpect(jsonPath("$.data.userId", matchesPattern("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
                 .andExpect(jsonPath("$.data.role").value("SENIOR"))
-                .andExpect(jsonPath("$.data.ageGroup").value("70S_PLUS"))
+                .andExpect(jsonPath("$.data.ageGroup").value("80S_PLUS"))
                 .andExpect(jsonPath("$.data.nickname", matchesPattern("[가-힣]+ 양 [1-9]\\d{2}")))
                 // 명세의 네 필드 외에 다른 값이 내려가지 않는다.
                 .andExpect(jsonPath("$.data.length()").value(4));
@@ -68,7 +68,7 @@ class UserControllerTest extends IntegrationTestSupport {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"20S", "30S", "40S", "50S", "60S", "70S_PLUS"})
+    @ValueSource(strings = {"20S", "30S", "40S", "50S", "60S", "70S", "80S_PLUS"})
     void 청년과_어르신_모두_모든_나이대로_가입할_수_있다(String ageGroup) throws Exception {
         for (String role : new String[]{"YOUTH", "SENIOR"}) {
             mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON)
@@ -105,6 +105,9 @@ class UserControllerTest extends IntegrationTestSupport {
             "{\"role\":null,\"ageGroup\":\"20S\"}",
             "{\"role\":\"ADMIN\",\"ageGroup\":\"20S\"}",
             "{\"role\":\"YOUTH\",\"ageGroup\":\"10S\"}",
+            // 이전 값(70대 이상)은 더 이상 받지 않는다. 70대는 70S, 80대 이상은 80S_PLUS로 나뉜다.
+            "{\"role\":\"SENIOR\",\"ageGroup\":\"70S_PLUS\"}",
+            "{\"role\":\"SENIOR\",\"ageGroup\":\"80S\"}",
             "{\"role\":\"YOUTH\",\"ageGroup\":\"20\"}",
             "{\"role\":\"YOUTH\",\"ageGroup\":\"AGE_20S\"}",
             "{\"role\":\"YOUTH\",\"ageGroup\":20}",
