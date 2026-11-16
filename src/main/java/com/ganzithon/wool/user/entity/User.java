@@ -31,7 +31,7 @@ public class User extends BaseCreatedEntity {
 
     @Convert(converter = AgeGroupConverter.class)
     @Column(name = "age_group", nullable = false,
-            columnDefinition = "ENUM('20S', '30S', '40S', '50S', '60S', '70S_PLUS')")
+            columnDefinition = "ENUM('20S', '30S', '40S', '50S', '60S', '70S', '80S_PLUS')")
     private AgeGroup ageGroup;
 
     @Column(name = "nickname", length = 10, nullable = false, unique = true)

@@ -43,10 +43,10 @@ class UserServiceTest {
         when(nicknameGenerator.generate()).thenReturn("포근한 양 312");
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        User user = userService.join(Role.SENIOR, AgeGroup.AGE_70S_PLUS, null);
+        User user = userService.join(Role.SENIOR, AgeGroup.AGE_80S_PLUS, null);
 
         assertThat(user.getRole()).isEqualTo(Role.SENIOR);
-        assertThat(user.getAgeGroup()).isEqualTo(AgeGroup.AGE_70S_PLUS);
+        assertThat(user.getAgeGroup()).isEqualTo(AgeGroup.AGE_80S_PLUS);
         assertThat(user.getNickname()).isEqualTo("포근한 양 312");
         assertThat(user.getSanctionLevel()).isEqualTo(SanctionLevel.NONE);
         assertThat(user.getId()).isNotBlank();
