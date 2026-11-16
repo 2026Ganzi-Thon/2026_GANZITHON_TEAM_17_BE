@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum WoolResponseCode implements ResponseCode {
 
-    RECORD(HttpStatus.OK, "WOOL_200_1", "털 기록 조회에 성공했습니다.");
+    RECORD(HttpStatus.OK, "WOOL_200_1", "털 기록 조회에 성공했습니다."),
+    RECEIVED_HEARTS(HttpStatus.OK, "WOOL_200_2", "받은 마음 목록 조회에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
