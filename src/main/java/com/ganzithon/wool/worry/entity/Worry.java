@@ -49,6 +49,10 @@ public class Worry extends BaseSoftDeleteEntity {
         return new Worry(author, title, content, tag, visibility);
     }
 
+    public void hide() {
+        this.hidden = true;
+    }
+
     public void makeSeniorsOnly() {
         this.visibility = WorryVisibility.SENIORS_ONLY;
     }

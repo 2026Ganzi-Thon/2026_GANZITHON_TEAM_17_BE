@@ -3,6 +3,9 @@ package com.ganzithon.wool.report.controller;
 import com.ganzithon.wool.global.auth.LoginUser;
 import com.ganzithon.wool.global.response.ApiResponse;
 import com.ganzithon.wool.report.request.ReportReplyRequest;
+import com.ganzithon.wool.report.request.ReportWorryRequest;
+import com.ganzithon.wool.report.response.ReportWorryResponse;
+import com.ganzithon.wool.report.service.WorryReportService;
 import com.ganzithon.wool.report.response.ReportReplyResponse;
 import com.ganzithon.wool.report.response.ReportResponseCode;
 import com.ganzithon.wool.report.service.ReplyReportService;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReportController {
 
     private final ReplyReportService replyReportService;
+    private final WorryReportService worryReportService;
 
     // REPORT-001 답장 신고
     @PostMapping("/replies/{replyId}/reports")
@@ -32,4 +36,11 @@ public class ReportController {
         return ApiResponse.of(ReportResponseCode.REPLY_REPORTED,
                 replyReportService.report(youth, replyId, request.reason())).toResponseEntity();
     }
+    @PostMapping("/worries/{worryId}/reports")
+    public ResponseEntity<ApiResponse<ReportWorryResponse>> reportWorry(
+            @LoginUser User user, @PathVariable Long worryId, @Valid @RequestBody ReportWorryRequest request) {
+        return ApiResponse.of(ReportResponseCode.WORRY_REPORTED,
+                worryReportService.report(user, worryId, request.reason())).toResponseEntity();
+    }
+
 }
