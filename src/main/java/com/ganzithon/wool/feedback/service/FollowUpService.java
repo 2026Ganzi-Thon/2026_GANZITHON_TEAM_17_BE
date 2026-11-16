@@ -3,6 +3,7 @@ package com.ganzithon.wool.feedback.service;
 import com.ganzithon.wool.feedback.entity.FollowUp;
 import com.ganzithon.wool.feedback.repository.FollowUpRepository;
 import com.ganzithon.wool.feedback.request.CreateFollowUpRequest;
+import com.ganzithon.wool.feedback.response.ChangeFollowUpVisibilityResponse;
 import com.ganzithon.wool.feedback.response.CreateFollowUpResponse;
 import com.ganzithon.wool.filter.service.ContentFilter;
 import com.ganzithon.wool.global.exception.BusinessException;
@@ -41,4 +42,19 @@ public class FollowUpService {
         notifications.send(reply.getSenior().getId(), NotificationType.FOLLOW_UP_ARRIVED, "후일담이 도착했어요", null, TargetKind.RECEIVED, null);
         return new CreateFollowUpResponse(replyId, saved.getContent(), visibility, saved.getCreatedAt());
     }
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ChangeFollowUpVisibilityResponse changeVisibility(String userId, Long replyId, WorryVisibility visibility) {
+        Long worryId = replies.findWorryIdForLike(replyId).orElseThrow(() -> new BusinessException(FollowUpErrorCode.NOT_FOUND));
+        var worry = worries.findByIdAndDeletedAtIsNull(worryId).orElseThrow(() -> new BusinessException(FollowUpErrorCode.NOT_FOUND));
+        var reply = replies.findByIdAndDeletedAtIsNull(replyId).orElseThrow(() -> new BusinessException(FollowUpErrorCode.NOT_FOUND));
+        if (worry.isHidden()) throw new BusinessException(FollowUpErrorCode.NOT_FOUND);
+        if (reply.isHidden() || !worry.getAuthor().getId().equals(userId)) throw new BusinessException(ReplyErrorCode.FORBIDDEN_VIEW);
+        var followUp = followUps.findByReplyId(replyId).orElseThrow(() -> new BusinessException(FollowUpErrorCode.NOT_FOUND));
+        if (visibility != WorryVisibility.SENIORS_ONLY || followUp.getVisibility() != WorryVisibility.PUBLIC) {
+            throw new BusinessException(FollowUpErrorCode.VISIBILITY_CONFLICT);
+        }
+        followUp.makeSeniorsOnly();
+        return new ChangeFollowUpVisibilityResponse(replyId, followUp.getVisibility());
+    }
+
 }
