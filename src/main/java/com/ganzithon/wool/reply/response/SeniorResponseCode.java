@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum SeniorResponseCode implements ResponseCode {
 
     WORRY_LIST(HttpStatus.OK, "SENIOR_200_2", "고민 목록 조회에 성공했습니다."),
+    REPLY_LIST(HttpStatus.OK, "SENIOR_200_3", "내가 보낸 답장 목록 조회에 성공했습니다."),
     WORRY_DETAIL(HttpStatus.OK, "SENIOR_200_4", "고민 상세 조회에 성공했습니다.");
 
     private final HttpStatus httpStatus;
