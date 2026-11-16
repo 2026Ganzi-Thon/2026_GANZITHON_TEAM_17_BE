@@ -48,6 +48,7 @@ class SeniorReplyListControllerTest extends IntegrationTestSupport {
     @Autowired private ThanksRepository thanksRepository;
     @Autowired private FollowUpRepository followUpRepository;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private com.ganzithon.wool.report.service.WorryReportService worryReportService;
 
     private User youth;
     private User senior;
@@ -242,4 +243,19 @@ class SeniorReplyListControllerTest extends IntegrationTestSupport {
         list(null).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("USER_401_001"));
         list(youth).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("USER_403_001"));
     }
+    @Test
+    void 고민_신고_후_어르신_목록에서_고민과_마음_정보를_가린다() throws Exception {
+        Worry worry = newWorry("신고할 고민");
+        Reply reply = replyOn(worry, senior);
+        thanksRepository.saveAndFlush(Thanks.of(reply, ThanksStamp.GRATEFUL, "감사해요"));
+        followUpRepository.saveAndFlush(FollowUp.of(reply, "후일담", WorryVisibility.PUBLIC));
+        like(reply, 1);
+        worryReportService.report(senior, worry.getId(), com.ganzithon.wool.report.entity.WorryReportReason.AD);
+        worries.flush();
+        list(senior).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].worryTitle").value("삭제된 고민"))
+                .andExpect(jsonPath("$.data.items[0].likeCount").value(0))
+                .andExpect(jsonPath("$.data.items[0].thanked").value(false))
+                .andExpect(jsonPath("$.data.items[0].hasFollowUp").value(false));
+    }
+
 }

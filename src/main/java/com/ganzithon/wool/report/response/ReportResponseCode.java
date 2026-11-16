@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum ReportResponseCode implements ResponseCode {
 
+    WORRY_REPORTED(HttpStatus.CREATED, "REPORT_201_2", "신고가 접수되었고 고민을 숨겼습니다."),
     REPLY_REPORTED(HttpStatus.CREATED, "REPORT_201_1", "신고가 접수되었고 답장을 숨겼습니다.");
 
     private final HttpStatus httpStatus;
