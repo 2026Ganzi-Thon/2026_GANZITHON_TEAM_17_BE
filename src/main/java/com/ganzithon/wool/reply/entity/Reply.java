@@ -94,11 +94,15 @@ public class Reply extends BaseSoftDeleteEntity {
 
     private static Reply ofWritten(Worry worry, User senior, ReplyType type, String content) {
         requireParticipants(worry, senior);
+        requireWrittenContent(content);
+        return new Reply(worry, senior, type, content, null);
+    }
+
+    private static void requireWrittenContent(String content) {
         // 글자 수는 문자(코드포인트) 단위로 센다. 이모지가 둘로 세어지지 않게 String.length()를 쓰지 않는다.
         if (content == null || content.isBlank() || content.codePointCount(0, content.length()) > CONTENT_MAX_LENGTH) {
             throw new IllegalArgumentException("답장은 1자 이상 " + CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
         }
-        return new Reply(worry, senior, type, content, null);
     }
 
     private static void requireParticipants(Worry worry, User senior) {
@@ -114,6 +118,16 @@ public class Reply extends BaseSoftDeleteEntity {
 
     public void hide() {
         this.hidden = true;
+    }
+
+    // 글·음성 답장의 내용을 고친다. 글자 수 규칙은 작성할 때와 같고 내용은 다듬지 않는다. 손편지는 고칠 수 없다.
+    // 고마움·후일담을 받았는지, 쓴 사람이 맞는지는 서비스가 답장 행을 잠근 뒤에 판단한다.
+    public void editContent(String content) {
+        if (type == ReplyType.LETTER) {
+            throw new IllegalStateException("손편지 답장은 수정할 수 없습니다.");
+        }
+        requireWrittenContent(content);
+        this.content = content;
     }
 
     // 이미 열어본 답장에 다시 호출해도 최초 시각을 유지한다.
