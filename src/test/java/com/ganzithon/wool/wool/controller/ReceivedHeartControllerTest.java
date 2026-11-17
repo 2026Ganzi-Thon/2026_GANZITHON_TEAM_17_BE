@@ -48,6 +48,7 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
     @Autowired private FollowUpRepository followUpRepository;
     @Autowired private ReceivedHeartRepository receivedHeartRepository;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private com.ganzithon.wool.report.service.WorryReportService worryReportService;
 
     private User youth;
     private User senior;
@@ -123,9 +124,12 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
         Reply first = replyOn(newWorry("첫 직장 고민"), senior);
         Reply second = replyOn(newWorry("두 번째 고민"), senior);
         Reply third = replyOn(newWorry("세 번째 고민"), senior);
-        thanksAt(thanks(first, ThanksStamp.GRATEFUL, "선배님 덕분에 다시 힘냈어요."), 30);
-        followUpAt(followUp(second, "버텨봤더니 마음이 편해졌어요.", WorryVisibility.SENIORS_ONLY), 20);
-        thanksAt(thanks(third, ThanksStamp.CHEERED, null), 10);
+        Thanks firstHeart = thanks(first, ThanksStamp.GRATEFUL, "선배님 덕분에 다시 힘냈어요.");
+        FollowUp secondHeart = followUp(second, "버텨봤더니 마음이 편해졌어요.", WorryVisibility.SENIORS_ONLY);
+        Thanks thirdHeart = thanks(third, ThanksStamp.CHEERED, null);
+        jdbc.update("UPDATE thanks SET created_at = ? WHERE id = ?", java.time.LocalDateTime.of(2026, 1, 1, 10, 0), firstHeart.getId());
+        jdbc.update("UPDATE follow_ups SET created_at = ? WHERE id = ?", java.time.LocalDateTime.of(2026, 1, 1, 10, 1), secondHeart.getId());
+        jdbc.update("UPDATE thanks SET created_at = ? WHERE id = ?", java.time.LocalDateTime.of(2026, 1, 1, 10, 2), thirdHeart.getId());
 
         received(senior)
                 .andExpect(status().isOk())
@@ -152,8 +156,10 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
     @Test
     void 한_답장에_고마움과_후일담이_모두_있으면_두_항목으로_나온다() throws Exception {
         Reply reply = replyOn(newWorry("한 고민"), senior);
-        thanksAt(thanks(reply, ThanksStamp.HELPED, "고마워요"), 20);
-        followUpAt(followUp(reply, "그 뒤 이야기", WorryVisibility.PUBLIC), 10);
+        Thanks thank = thanks(reply, ThanksStamp.HELPED, "고마워요");
+        FollowUp follow = followUp(reply, "그 뒤 이야기", WorryVisibility.PUBLIC);
+        jdbc.update("UPDATE thanks SET created_at = ? WHERE id = ?", java.time.LocalDateTime.of(2026, 1, 1, 10, 0), thank.getId());
+        jdbc.update("UPDATE follow_ups SET created_at = ? WHERE id = ?", java.time.LocalDateTime.of(2026, 1, 1, 10, 1), follow.getId());
 
         received(senior)
                 .andExpect(jsonPath("$.data.items.length()").value(2))
@@ -283,4 +289,17 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
 
         assertThat(thanksRead(t.getId())).isFalse();
     }
+    @Test
+    void 고민_신고_후_받은_마음은_목록에서_빠지고_읽음_처리되지_않는다() throws Exception {
+        Worry worry = newWorry("신고할 고민");
+        Reply reply = replyOn(worry, senior);
+        Thanks thank = thanks(reply, ThanksStamp.GRATEFUL, "감사해요");
+        FollowUp follow = followUp(reply, "후일담", WorryVisibility.PUBLIC);
+        worryReportService.report(senior, worry.getId(), com.ganzithon.wool.report.entity.WorryReportReason.AD);
+        worries.flush();
+        received(senior).andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(0));
+        assertThat(thanksRead(thank.getId())).isFalse();
+        assertThat(followUpRead(follow.getId())).isFalse();
+    }
+
 }
