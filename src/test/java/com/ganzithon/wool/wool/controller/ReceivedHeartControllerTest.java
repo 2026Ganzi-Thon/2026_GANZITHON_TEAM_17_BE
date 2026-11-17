@@ -78,6 +78,15 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
         return followUpRepository.saveAndFlush(FollowUp.of(reply, content, visibility));
     }
 
+    // 같은 시각에 만들어져 순서가 우연에 맡겨지지 않도록, 받은 시각을 직접 정한다.
+    private void thanksAt(Thanks thanks, int minutesAgo) {
+        jdbc.update("UPDATE thanks SET created_at = ? WHERE id = ?", java.time.LocalDateTime.now().minusMinutes(minutesAgo), thanks.getId());
+    }
+
+    private void followUpAt(FollowUp followUp, int minutesAgo) {
+        jdbc.update("UPDATE follow_ups SET created_at = ? WHERE id = ?", java.time.LocalDateTime.now().minusMinutes(minutesAgo), followUp.getId());
+    }
+
     private boolean thanksRead(Long id) {
         return Boolean.TRUE.equals(jdbc.queryForObject("SELECT read_by_senior FROM thanks WHERE id = ?", Boolean.class, id));
     }
