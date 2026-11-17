@@ -11,6 +11,7 @@ RUN ./gradlew bootJar --no-daemon -x test
 
 # 헬스체크가 curl을 쓰므로 curl이 들어 있는 Ubuntu 기반 JRE 이미지를 쓴다. (alpine에는 curl이 없다)
 FROM eclipse-temurin:21-jre
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080

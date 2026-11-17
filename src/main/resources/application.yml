@@ -28,6 +28,13 @@ upstage:
   model: solar-mini4
   timeout: 3s
 
+groq:
+  api-key: ${GROQ_API_KEY:}
+  base-url: https://api.groq.com/openai/v1
+  model: whisper-large-v3-turbo
+  timeout: 30s
+  ffmpeg: ${STT_FFMPEG:ffmpeg}
+
 ---
 spring:
   config:
