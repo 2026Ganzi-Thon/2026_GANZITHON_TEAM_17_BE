@@ -13,6 +13,9 @@ import com.ganzithon.wool.reply.service.ReplyCreateService;
 import com.ganzithon.wool.reply.service.ReplyDeleteService;
 import com.ganzithon.wool.reply.service.ReplyLikeService;
 import com.ganzithon.wool.reply.service.ReplyUpdateService;
+import com.ganzithon.wool.reply.service.ReplyViewService;
+import com.ganzithon.wool.reply.response.ReplyDetailResponse;
+import org.springframework.web.bind.annotation.GetMapping;
 import com.ganzithon.wool.user.entity.Role;
 import com.ganzithon.wool.user.entity.User;
 import jakarta.validation.Valid;
@@ -35,11 +38,20 @@ public class ReplyController {
     private final ReplyUpdateService replyUpdateService;
     private final ReplyDeleteService replyDeleteService;
     private final ReplyLikeService replyLikeService;
+    private final ReplyViewService replyViewService;
 
     @PostMapping("/replies/{replyId}/likes")
     public ResponseEntity<ApiResponse<ReplyLikeResponse>> toggleLike(
             @LoginUser(Role.YOUTH) User user, @PathVariable Long replyId) {
         return ApiResponse.of(ReplyResponseCode.LIKE_TOGGLED, replyLikeService.toggle(user.getId(), replyId)).toResponseEntity();
+    }
+
+    // FEEDBACK-001 답장 상세 조회 (고민 작성자, 최초 조회 시각 기록)
+    @GetMapping("/replies/{replyId}")
+    public ResponseEntity<ApiResponse<ReplyDetailResponse>> view(
+            @LoginUser(Role.YOUTH) User youth, @PathVariable Long replyId) {
+        return ApiResponse.of(ReplyResponseCode.VIEWED, replyViewService.view(youth.getId(), replyId))
+                .toResponseEntity();
     }
 
     // REPLY-005 답장 작성
