@@ -1,6 +1,7 @@
 package com.ganzithon.wool.global.exception;
 
 import com.ganzithon.wool.global.response.ApiResponse;
+import com.ganzithon.wool.stt.SttErrorCode;
 import com.ganzithon.wool.upload.exception.UploadErrorCode;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +52,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return invalidInput(Map.of("errors", errors));
     }
 
-    // 멀티파트 용량 상한(application.yml) 초과. 손편지 업로드의 용량 초과 응답과 같다.
+    // 멀티파트 용량 초과는 요청한 API에 맞는 오류로 반환한다.
     @Override
     protected ResponseEntity<Object> handleMaxUploadSizeExceededException(
             MaxUploadSizeExceededException exception,
@@ -59,6 +60,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatusCode status,
             WebRequest request
     ) {
+        if (request instanceof org.springframework.web.context.request.ServletWebRequest servletRequest
+                && "/api/stt".equals(servletRequest.getRequest().getRequestURI())) {
+            return ResponseEntity.status(SttErrorCode.INVALID_AUDIO.getHttpStatus())
+                    .body(ApiResponse.error(SttErrorCode.INVALID_AUDIO));
+        }
         return ResponseEntity
                 .status(UploadErrorCode.TOO_LARGE.getHttpStatus())
                 .body(ApiResponse.error(UploadErrorCode.TOO_LARGE));
