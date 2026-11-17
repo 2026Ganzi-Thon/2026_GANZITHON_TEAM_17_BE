@@ -1,3 +1,10 @@
 /gradlew text eol=lf
 *.bat text eol=crlf
 *.jar binary
+
+# 서버(리눅스)로 복사하거나 컨테이너에서 실행하는 파일은 윈도우에서 체크아웃해도 LF로 둔다.
+# CRLF가 섞이면 스크립트가 "set: pipefail\r: invalid option name"처럼 깨진다.
+*.sh text eol=lf
+Caddyfile text eol=lf
+Dockerfile text eol=lf
+compose*.yml text eol=lf
