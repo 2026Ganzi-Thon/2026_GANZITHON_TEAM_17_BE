@@ -37,4 +37,8 @@ public interface SeniorWorryRepository extends Repository<Worry, Long> {
     List<WorryRow> findReadableRows(@Param("seniorId") String seniorId);
 
     Optional<Worry> findByIdAndDeletedAtIsNullAndHiddenFalse(Long id);
+
+    // 어르신이 읽을 수 있는 고민(삭제·숨김 제외) 중 since 이후에 올라온 수. 공개 범위(선배님께만, 전체 공개)와 내가 답장했는지는 따지지 않는다.
+    @Query("select count(w) from Worry w where w.deletedAt is null and w.hidden = false and w.createdAt >= :since")
+    long countReadableCreatedSince(@Param("since") LocalDateTime since);
 }

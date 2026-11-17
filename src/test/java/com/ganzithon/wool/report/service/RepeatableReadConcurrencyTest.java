@@ -3,6 +3,10 @@ package com.ganzithon.wool.report.service;
 import com.ganzithon.wool.DatabaseCleaner;
 import com.ganzithon.wool.IntegrationTestSupport;
 import com.ganzithon.wool.certificate.repository.CertificateRepository;
+import com.ganzithon.wool.feedback.entity.Thanks;
+import com.ganzithon.wool.feedback.entity.ThanksStamp;
+import com.ganzithon.wool.feedback.repository.ThanksRepository;
+import com.ganzithon.wool.global.exception.BusinessException;
 import com.ganzithon.wool.notification.entity.Notification;
 import com.ganzithon.wool.notification.entity.NotificationType;
 import com.ganzithon.wool.notification.repository.NotificationRepository;
@@ -10,12 +14,14 @@ import com.ganzithon.wool.report.entity.ReplyReportReason;
 import com.ganzithon.wool.report.repository.ReplyReportRepository;
 import com.ganzithon.wool.reply.entity.Reply;
 import com.ganzithon.wool.reply.entity.ReplyType;
+import com.ganzithon.wool.reply.exception.ReplyErrorCode;
 import com.ganzithon.wool.reply.repository.ReplyRepository;
 import com.ganzithon.wool.reply.request.CreateReplyRequest;
 import com.ganzithon.wool.reply.response.CreateReplyResponse;
 import com.ganzithon.wool.reply.response.DeleteReplyResponse;
 import com.ganzithon.wool.reply.service.ReplyCreateService;
 import com.ganzithon.wool.reply.service.ReplyDeleteService;
+import com.ganzithon.wool.reply.service.ReplyUpdateService;
 import com.ganzithon.wool.reply.service.SeniorLock;
 import com.ganzithon.wool.user.entity.AgeGroup;
 import com.ganzithon.wool.user.entity.Role;
@@ -41,6 +47,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +58,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 // 이 테스트는 연결의 기본 격리 수준을 REPEATABLE READ로 두고(별도 H2 DB), 서비스가 선언한 READ COMMITTED가 그것을 덮어써서
 // "잠금을 기다린 뒤에도 트랜잭션 시작 시점의 오래된 수를 읽는" 문제를 막는지 본다.
 // 신고 테스트는 두 신고가 잠금 전 조회를 마치고 어르신 행 잠금에서 함께 기다리게 만든 뒤 풀어 주므로 순서가 매번 같다.
+// 답장 수정(REPLY-008)도 같다: 잠금을 기다린 뒤 고마움이 있는지 최신 커밋으로 읽어야 한다.
 // 서비스의 @Transactional(isolation = READ_COMMITTED)를 빼면 아래 테스트가 실패한다.
 // H2의 REPEATABLE READ는 MySQL보다 스냅샷을 더 일찍 만들어서, 이 테스트는 선언이 지워지는 것을 막는 안전망이다.
 @TestPropertySource(properties = {
@@ -68,6 +76,8 @@ class RepeatableReadConcurrencyTest extends IntegrationTestSupport {
     @Autowired private ReplyReportService replyReportService;
     @Autowired private ReplyCreateService replyCreateService;
     @Autowired private ReplyDeleteService replyDeleteService;
+    @Autowired private ReplyUpdateService replyUpdateService;
+    @Autowired private ThanksRepository thanksRepository;
     @Autowired private SeniorLock seniorLock;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private JdbcTemplate jdbc;
@@ -273,6 +283,51 @@ class RepeatableReadConcurrencyTest extends IntegrationTestSupport {
                     assertThat(deleteResult.totalReplies()).as("%d번째 라운드", round).isEqualTo(18);
                 }
                 assertThat(replies.countVisibleBySeniorId(senior.getId())).as("%d번째 라운드", round).isEqualTo(19);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+    // 수정이 답장 행 잠금에서 기다리는 사이 고마움이 커밋되면 수정은 409여야 한다. 오래된 스냅샷을 읽으면 수정이 성공한다.
+    @Test
+    void 수정이_잠금을_기다리는_사이_고마움이_커밋돼도_수정은_409다() throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            for (int round = 0; round < 4; round++) {
+                User senior = newUser(Role.SENIOR, "격리선배");
+                Target target = newTarget(senior);
+                Long replyId = target.reply().getId();
+
+                CountDownLatch locked = new CountDownLatch(1);
+                CountDownLatch release = new CountDownLatch(1);
+                AtomicInteger holderSessionId = new AtomicInteger(-1);
+                Future<Object> holder = pool.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
+                    Reply lockedReply = replies.findByIdAndDeletedAtIsNull(replyId).orElseThrow();
+                    thanksRepository.saveAndFlush(Thanks.of(lockedReply, ThanksStamp.GRATEFUL, "고마워요"));
+                    holderSessionId.set(jdbc.queryForObject("SELECT SESSION_ID()", Integer.class));
+                    locked.countDown();
+                    try {
+                        release.await(60, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return null;
+                }));
+                assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+                Future<Object> updating = pool.submit(() -> replyUpdateService.update(senior, replyId, "고친 답장"));
+                assertThat(waitUntilBlockedBy(holderSessionId.get(), 1, 15_000)).isTrue();
+
+                release.countDown();
+                holder.get(10, TimeUnit.SECONDS);
+                try {
+                    updating.get(30, TimeUnit.SECONDS);
+                    throw new AssertionError(round + "번째 라운드: 고마움을 받은 답장의 수정이 성공했습니다.");
+                } catch (ExecutionException e) {
+                    assertThat(e.getCause()).isInstanceOf(BusinessException.class);
+                    assertThat(((BusinessException) e.getCause()).getErrorCode()).isEqualTo(ReplyErrorCode.FEEDBACK_RECEIVED);
+                }
+                assertThat(replies.findById(replyId).orElseThrow().getContent()).isEqualTo("답장");
             }
         } finally {
             pool.shutdownNow();
