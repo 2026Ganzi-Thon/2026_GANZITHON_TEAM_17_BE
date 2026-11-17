@@ -77,6 +77,15 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
         return followUpRepository.saveAndFlush(FollowUp.of(reply, content, visibility));
     }
 
+    // 같은 시각에 만들어져 순서가 우연에 맡겨지지 않도록, 받은 시각을 직접 정한다.
+    private void thanksAt(Thanks thanks, int minutesAgo) {
+        jdbc.update("UPDATE thanks SET created_at = ? WHERE id = ?", java.time.LocalDateTime.now().minusMinutes(minutesAgo), thanks.getId());
+    }
+
+    private void followUpAt(FollowUp followUp, int minutesAgo) {
+        jdbc.update("UPDATE follow_ups SET created_at = ? WHERE id = ?", java.time.LocalDateTime.now().minusMinutes(minutesAgo), followUp.getId());
+    }
+
     private boolean thanksRead(Long id) {
         return Boolean.TRUE.equals(jdbc.queryForObject("SELECT read_by_senior FROM thanks WHERE id = ?", Boolean.class, id));
     }
@@ -114,9 +123,9 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
         Reply first = replyOn(newWorry("첫 직장 고민"), senior);
         Reply second = replyOn(newWorry("두 번째 고민"), senior);
         Reply third = replyOn(newWorry("세 번째 고민"), senior);
-        thanks(first, ThanksStamp.GRATEFUL, "선배님 덕분에 다시 힘냈어요.");
-        followUp(second, "버텨봤더니 마음이 편해졌어요.", WorryVisibility.SENIORS_ONLY);
-        thanks(third, ThanksStamp.CHEERED, null);
+        thanksAt(thanks(first, ThanksStamp.GRATEFUL, "선배님 덕분에 다시 힘냈어요."), 30);
+        followUpAt(followUp(second, "버텨봤더니 마음이 편해졌어요.", WorryVisibility.SENIORS_ONLY), 20);
+        thanksAt(thanks(third, ThanksStamp.CHEERED, null), 10);
 
         received(senior)
                 .andExpect(status().isOk())
@@ -143,8 +152,8 @@ class ReceivedHeartControllerTest extends IntegrationTestSupport {
     @Test
     void 한_답장에_고마움과_후일담이_모두_있으면_두_항목으로_나온다() throws Exception {
         Reply reply = replyOn(newWorry("한 고민"), senior);
-        thanks(reply, ThanksStamp.HELPED, "고마워요");
-        followUp(reply, "그 뒤 이야기", WorryVisibility.PUBLIC);
+        thanksAt(thanks(reply, ThanksStamp.HELPED, "고마워요"), 20);
+        followUpAt(followUp(reply, "그 뒤 이야기", WorryVisibility.PUBLIC), 10);
 
         received(senior)
                 .andExpect(jsonPath("$.data.items.length()").value(2))

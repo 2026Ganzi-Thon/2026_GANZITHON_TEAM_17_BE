@@ -53,6 +53,20 @@ public class ReceivedHeartRepository {
                 seniorId, seniorId);
     }
 
+    // 어르신 홈의 안 읽은 받은 마음 수. 목록(findBySeniorId)과 같은 보이는 조건(VISIBLE_FILTER)에 안 읽음 조건만 더한다.
+    // 그래서 목록에 안 보이는 마음(삭제·숨김)이 안 읽은 수에 남지 않는다.
+    public long countUnreadBySeniorId(String seniorId) {
+        Long count = jdbc.queryForObject("""
+                SELECT (SELECT COUNT(*) FROM thanks t
+                """ + VISIBLE_FILTER.formatted("t") + """
+                          AND t.read_by_senior = FALSE)
+                     + (SELECT COUNT(*) FROM follow_ups f
+                """ + VISIBLE_FILTER.formatted("f") + """
+                          AND f.read_by_senior = FALSE)
+                """, Long.class, seniorId, seniorId);
+        return count == null ? 0 : count;
+    }
+
     // 목록에 담아 보낸 마음만 읽음으로 바꾼다. "안 읽은 걸 전부"가 아니라 보낸 id만 바꾸므로,
     // 조회하는 사이 새로 도착한 마음은 안 읽은 채로 남는다. 이미 읽은 마음은 건드리지 않는다.
     public void markRead(List<Long> thanksIds, List<Long> followUpIds) {
