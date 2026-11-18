@@ -36,6 +36,8 @@ services:
       UPSTAGE_API_KEY: ${UPSTAGE_API_KEY:-}
       # 손편지 사진. 컨테이너를 다시 띄워도 남도록 볼륨에 둔다.
       FILE_STORAGE_DIR: /data/uploads
+      # 프론트(Firebase Hosting) 출처. 쉼표로 여러 개. 프론트 주소가 바뀌면 서버 .env의 CORS_ALLOWED_ORIGINS만 고친다.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://hanol-ganzi-team17.web.app,https://hanol-ganzi-team17.firebaseapp.com,http://localhost:5173,http://localhost:3000}
     volumes:
       - uploads:/data/uploads
     depends_on:
