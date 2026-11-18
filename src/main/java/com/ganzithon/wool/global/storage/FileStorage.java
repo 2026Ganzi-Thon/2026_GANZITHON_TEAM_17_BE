@@ -1,5 +1,7 @@
 package com.ganzithon.wool.global.storage;
 
+import java.util.Optional;
+
 // 파일 저장소. 서버 로컬 폴더(LocalFileStorage)에 저장한다. 저장 방식이 바뀌어도 호출하는 쪽이 영향받지 않도록 인터페이스 뒤에 둔다.
 public interface FileStorage {
 
@@ -9,4 +11,7 @@ public interface FileStorage {
 
     // save가 돌려준 공개 경로의 파일이 실제로 저장되어 있는지. 형식이 맞지 않는 경로나 저장 폴더 밖 경로는 없는 것으로 본다.
     boolean exists(String publicPath);
+
+    // save가 돌려준 공개 경로의 파일 내용. exists와 같은 기준으로 없는 파일이면 빈 값을 돌려준다.
+    Optional<byte[]> read(String publicPath);
 }

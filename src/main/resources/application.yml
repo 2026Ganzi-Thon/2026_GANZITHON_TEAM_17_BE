@@ -21,12 +21,24 @@ file:
   storage:
     dir: ${FILE_STORAGE_DIR:./uploads}
 
+# 프론트가 브라우저에서 호출할 수 있는 출처. 쉼표로 여러 개. 운영은 compose.prod.yml이 CORS_ALLOWED_ORIGINS로 넘긴다.
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://hanol-ganzi-team17.web.app,https://hanol-ganzi-team17.firebaseapp.com,http://localhost:5173,http://localhost:3000}
+
 # 위기 표현 감지(Solar). 키가 비어 있으면 호출하지 않고 위기 키워드 목록으로만 판단한다.
 upstage:
   api-key: ${UPSTAGE_API_KEY:}
   base-url: https://api.upstage.ai/v1
   model: solar-mini4
   timeout: 3s
+
+# 손편지 사진 글자 읽기(CLOVA OCR General). url이나 secret이 비어 있으면 호출하지 않고 손편지 내용 검사를 건너뛴다.
+clova:
+  ocr:
+    url: ${CLOVA_OCR_URL:}
+    secret: ${CLOVA_OCR_SECRET:}
+    timeout: 10s
+    max-concurrent-calls: 2
 
 groq:
   api-key: ${GROQ_API_KEY:}

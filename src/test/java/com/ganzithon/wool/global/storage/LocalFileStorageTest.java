@@ -97,4 +97,24 @@ class LocalFileStorageTest {
         assertThat(storage.exists(null)).isFalse();
         assertThat(storage.exists("/files/letters/x.d")).isFalse();
     }
+
+    @Test
+    void 저장한_파일의_내용을_공개_경로로_읽는다() {
+        LocalFileStorage storage = storage();
+        byte[] content = {1, 2, 3, (byte) 0xFF, 0};
+        String url = storage.save("letters", "abc-123.jpg", content);
+
+        assertThat(storage.read(url)).contains(content);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "/files/letters/other-456.jpg", "/files/letters/../letters/abc-123.jpg",
+            "/files/letters/abc-123.jpg/", "/files/Letters/abc-123.jpg", "https://x/files/letters/abc-123.jpg"})
+    void 없거나_형식이_다르거나_경로를_벗어나는_주소는_읽지_않는다(String publicPath) {
+        LocalFileStorage storage = storage();
+        storage.save("letters", "abc-123.jpg", new byte[]{1});
+
+        assertThat(storage.read(publicPath)).isEmpty();
+        assertThat(storage.read(null)).isEmpty();
+    }
 }

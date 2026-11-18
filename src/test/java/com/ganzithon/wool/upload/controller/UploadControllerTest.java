@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UploadControllerTest extends IntegrationTestSupport {
 
     private static final String URL = "/api/uploads/letters";
-    private static final Pattern IMAGE_URL = Pattern.compile("/files/letters/[0-9a-f-]{36}\\.(jpg|png|webp)");
+    private static final Pattern IMAGE_URL = Pattern.compile("/files/letters/[0-9a-f-]{36}\\.(jpg|png)");
 
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository users;
@@ -134,7 +134,7 @@ class UploadControllerTest extends IntegrationTestSupport {
     @Test
     void 확장자는_파일_이름이_아니라_실제_형식으로_정한다() throws Exception {
         assertThat(imageUrlOf(upload(senior, image("a.jpg", "image/jpeg", png())).andExpect(status().isCreated()))).endsWith(".png");
-        assertThat(imageUrlOf(upload(senior, image("a.png", "image/png", webp())).andExpect(status().isCreated()))).endsWith(".webp");
+        // 이름이 .webp여도 내용이 jpg면 jpg로 저장한다.
         assertThat(imageUrlOf(upload(senior, image("a.webp", "image/webp", jpeg(100))).andExpect(status().isCreated()))).endsWith(".jpg");
     }
 
@@ -230,6 +230,14 @@ class UploadControllerTest extends IntegrationTestSupport {
     @Test
     void 이름이_image가_아닌_파일은_받지_않는다() throws Exception {
         upload(senior, new MockMultipartFile("file", "a.jpg", "image/jpeg", jpeg(100)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("UPLOAD_400_001"));
+    }
+
+    // 손편지 내용 검사(클로바 OCR)가 webp를 읽지 못해서 받지 않는다. 받으면 검사를 피해 갈 수 있다.
+    @Test
+    void webp는_받지_않는다() throws Exception {
+        upload(senior, image("a.webp", "image/webp", webp()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("UPLOAD_400_001"));
     }

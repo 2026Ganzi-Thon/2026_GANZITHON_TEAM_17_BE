@@ -34,7 +34,7 @@ nano ~/wool/.env                 # 값 채우기
 - `BE_IMAGE`: `<도커허브아이디>/wool_be`. 배포 때는 `deploy.sh`가 같은 값을 넘기지만, `docker compose logs/exec/ps` 같은 수동 명령과 백업 스크립트도 이 값이 있어야 동작한다.
 - `DOMAIN`: Elastic IP가 `13.124.27.143`이면 `13-124-27-143.sslip.io`.
 - `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`: `openssl rand -hex 16`으로 만든 무작위 값.
-- `GROQ_API_KEY`(필수), `UPSTAGE_API_KEY`(비워도 됨).
+- `GROQ_API_KEY`(필수), `UPSTAGE_API_KEY`(비워도 됨), `CLOVA_OCR_URL`·`CLOVA_OCR_SECRET`(비워도 됨. 비우면 손편지 사진의 글자 검사를 건너뛴다. 키는 서버 `.env`에만 둔다).
 - `.env`와 `.pem`은 git이나 메신저에 올리지 않는다.
 - 운영 중에 `DB_PASSWORD`나 `MYSQL_ROOT_PASSWORD`를 바꾸려면 `.env`만 고쳐서는 안 된다. MySQL 데이터 볼륨에 이미 만들어진 계정의 비밀번호는 자동으로 바뀌지 않으므로, MySQL 안에서 `ALTER USER`로 먼저 바꾼 뒤 `.env`를 고치고 앱을 다시 띄운다.
 
