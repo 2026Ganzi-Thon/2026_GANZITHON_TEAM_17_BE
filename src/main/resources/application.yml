@@ -21,6 +21,10 @@ file:
   storage:
     dir: ${FILE_STORAGE_DIR:./uploads}
 
+# 프론트가 브라우저에서 호출할 수 있는 출처. 쉼표로 여러 개. 운영은 compose.prod.yml이 CORS_ALLOWED_ORIGINS로 넘긴다.
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://hanol-ganzi-team17.web.app,https://hanol-ganzi-team17.firebaseapp.com,http://localhost:5173,http://localhost:3000}
+
 # 위기 표현 감지(Solar). 키가 비어 있으면 호출하지 않고 위기 키워드 목록으로만 판단한다.
 upstage:
   api-key: ${UPSTAGE_API_KEY:}
