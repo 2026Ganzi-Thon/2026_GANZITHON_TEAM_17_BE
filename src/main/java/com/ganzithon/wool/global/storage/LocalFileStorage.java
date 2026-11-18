@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 // 서버 로컬 폴더에 저장한다. 저장한 파일은 FileStorageConfig가 /files/** 로 내려준다.
@@ -26,15 +27,31 @@ public class LocalFileStorage implements FileStorage {
 
     @Override
     public boolean exists(String publicPath) {
+        return resolve(publicPath).isPresent();
+    }
+
+    @Override
+    public Optional<byte[]> read(String publicPath) {
+        return resolve(publicPath).map(target -> {
+            try {
+                return Files.readAllBytes(target);
+            } catch (IOException e) {
+                throw new UncheckedIOException("파일을 읽지 못했습니다.", e);
+            }
+        });
+    }
+
+    // 공개 경로가 형식에 맞고 저장 폴더 안의 실제 파일을 가리킬 때만 그 파일의 경로를 돌려준다.
+    private Optional<Path> resolve(String publicPath) {
         if (publicPath == null || !publicPath.startsWith(PUBLIC_PREFIX)) {
-            return false;
+            return Optional.empty();
         }
         String[] parts = publicPath.substring(PUBLIC_PREFIX.length()).split("/", -1);
         if (parts.length != 2 || !SAFE_DIRECTORY.matcher(parts[0]).matches() || !SAFE_FILENAME.matcher(parts[1]).matches()) {
-            return false;
+            return Optional.empty();
         }
         Path target = root.resolve(parts[0]).resolve(parts[1]).normalize();
-        return target.startsWith(root) && Files.isRegularFile(target);
+        return target.startsWith(root) && Files.isRegularFile(target) ? Optional.of(target) : Optional.empty();
     }
 
     @Override

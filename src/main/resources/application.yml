@@ -28,6 +28,14 @@ upstage:
   model: solar-mini4
   timeout: 3s
 
+# 손편지 사진 글자 읽기(CLOVA OCR General). url이나 secret이 비어 있으면 호출하지 않고 손편지 내용 검사를 건너뛴다.
+clova:
+  ocr:
+    url: ${CLOVA_OCR_URL:}
+    secret: ${CLOVA_OCR_SECRET:}
+    timeout: 10s
+    max-concurrent-calls: 2
+
 groq:
   api-key: ${GROQ_API_KEY:}
   base-url: https://api.groq.com/openai/v1
