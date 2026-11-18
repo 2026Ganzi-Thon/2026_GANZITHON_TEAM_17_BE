@@ -25,14 +25,13 @@ class ImageFormatTest {
     void 파일_맨_앞_바이트로_형식을_판단한다() {
         assertThat(ImageFormat.detect(jpeg())).contains(ImageFormat.JPEG);
         assertThat(ImageFormat.detect(png())).contains(ImageFormat.PNG);
-        assertThat(ImageFormat.detect(webp())).contains(ImageFormat.WEBP);
+        assertThat(ImageFormat.detect(webp())).isEmpty();
     }
 
     @Test
     void 확장자_이름은_형식마다_정해져_있다() {
         assertThat(ImageFormat.JPEG.extension()).isEqualTo("jpg");
         assertThat(ImageFormat.PNG.extension()).isEqualTo("png");
-        assertThat(ImageFormat.WEBP.extension()).isEqualTo("webp");
     }
 
     @Test
@@ -52,13 +51,13 @@ class ImageFormatTest {
         assertThat(ImageFormat.detect(Arrays.copyOf(png(), 7))).isEmpty();
     }
 
+    // 손편지 내용 검사(클로바 OCR)가 webp를 읽지 못해서 받지 않는다. 받으면 검사를 피해 갈 수 있다.
     @Test
-    void WebP는_RIFF만으로는_부족하고_WEBP_표지가_있어야_한다() {
+    void WebP는_받지_않는다() {
         byte[] wave = new byte[]{'R', 'I', 'F', 'F', 0x24, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' '};
-        byte[] shortRiff = new byte[]{'R', 'I', 'F', 'F', 0x24, 0, 0, 0, 'W', 'E', 'B'};
 
+        assertThat(ImageFormat.detect(webp())).isEmpty();
         assertThat(ImageFormat.detect(wave)).isEmpty();
-        assertThat(ImageFormat.detect(shortRiff)).isEmpty();
     }
 
     @Test

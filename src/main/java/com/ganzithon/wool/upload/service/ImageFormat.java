@@ -3,10 +3,10 @@ package com.ganzithon.wool.upload.service;
 import java.util.Optional;
 
 // 허용하는 사진 형식. 파일 이름이나 Content-Type은 속이기 쉬워서 파일 맨 앞의 고유 바이트(시그니처)로 판단한다.
+// 손편지 내용 검사에 쓰는 클로바 OCR이 jpg/png만 읽으므로 webp는 받지 않는다. (받으면 검사를 피해 갈 수 있다)
 public enum ImageFormat {
     JPEG("jpg"),
-    PNG("png"),
-    WEBP("webp");
+    PNG("png");
 
     private final String extension;
 
@@ -24,11 +24,6 @@ public enum ImageFormat {
         }
         if (startsWith(content, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)) {
             return Optional.of(PNG);
-        }
-        // WebP는 "RIFF" + 파일 크기 4바이트 + "WEBP" 순서다.
-        if (startsWith(content, 'R', 'I', 'F', 'F') && content.length >= 12
-                && content[8] == 'W' && content[9] == 'E' && content[10] == 'B' && content[11] == 'P') {
-            return Optional.of(WEBP);
         }
         return Optional.empty();
     }

@@ -8,7 +8,7 @@ public final class LetterImageUrl {
     public static final String DIRECTORY = "letters";
 
     private static final Pattern FORMAT = Pattern.compile(
-            "/files/" + DIRECTORY + "/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(?:jpg|png|webp)");
+            "/files/" + DIRECTORY + "/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(?:jpg|png)");
 
     private LetterImageUrl() {
     }
