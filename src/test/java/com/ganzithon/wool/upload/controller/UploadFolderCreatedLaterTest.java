@@ -48,7 +48,7 @@ class UploadFolderCreatedLaterTest extends IntegrationTestSupport {
 
     @Test
     void 저장_폴더가_없는_상태로_시작해도_올린_사진을_열_수_있다() throws Exception {
-        byte[] jpeg = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 1, 2, 3};
+        byte[] jpeg = com.ganzithon.wool.upload.service.TestImages.jpeg(false);
         User senior = users.saveAndFlush(User.join(Role.SENIOR, AgeGroup.AGE_60S, "새폴" + UUID.randomUUID().toString().substring(0, 6)));
 
         String body = mockMvc.perform(multipart("/api/uploads/letters")

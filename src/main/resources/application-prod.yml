@@ -11,3 +11,11 @@ spring:
       ddl-auto: none
 groq:
   api-key: ${GROQ_API_KEY}
+
+# API 명세(Swagger UI, /v3/api-docs)는 운영 서버에 공개하지 않는다. 전체 엔드포인트와 필드 구조가 외부에 그대로 드러나기 때문이다.
+# 로컬 실행(local 프로필)에서는 그대로 쓸 수 있고, API 명세는 노션 문서를 기준으로 한다.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

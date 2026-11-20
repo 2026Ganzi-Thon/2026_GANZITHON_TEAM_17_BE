@@ -70,17 +70,13 @@ class UploadControllerTest extends IntegrationTestSupport {
         FileSystemUtils.deleteRecursively(Path.of(storageDir).toAbsolutePath().resolve("letters"));
     }
 
+    // 사진 구조까지 읽어서 위치 정보를 지우므로 실제로 그려지는 사진을 쓴다.
     private static byte[] jpeg(int size) {
-        byte[] bytes = new byte[size];
-        bytes[0] = (byte) 0xFF;
-        bytes[1] = (byte) 0xD8;
-        bytes[2] = (byte) 0xFF;
-        bytes[3] = (byte) 0xE0;
-        return bytes;
+        return com.ganzithon.wool.upload.service.TestImages.jpegOfSize(size);
     }
 
     private static byte[] png() {
-        return new byte[]{(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3};
+        return com.ganzithon.wool.upload.service.TestImages.png();
     }
 
     private static byte[] webp() {
@@ -115,8 +111,8 @@ class UploadControllerTest extends IntegrationTestSupport {
     // ---------- 성공 ----------
 
     @Test
-    void 사진을_올리면_201과_상대_경로를_래퍼로_내려주고_원본을_그대로_저장한다() throws Exception {
-        byte[] bytes = jpeg(2000);
+    void 사진을_올리면_201과_상대_경로를_래퍼로_내려주고_부가_정보가_없는_사진은_그대로_저장한다() throws Exception {
+        byte[] bytes = jpeg(0);
         ResultActions result = upload(senior, image("letter.jpg", "image/jpeg", bytes))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(201))
@@ -232,6 +228,57 @@ class UploadControllerTest extends IntegrationTestSupport {
         upload(senior, new MockMultipartFile("file", "a.jpg", "image/jpeg", jpeg(100)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("UPLOAD_400_001"));
+    }
+
+    // 휴대폰 사진에는 촬영 위치와 기기 정보가 들어 있고, 올린 사진은 주소를 아는 누구나 열 수 있다. 저장할 때 지우고 그림은 그대로 둔다.
+    @Test
+    void 휴대폰_사진의_위치_정보는_저장할_때_지우고_그림은_그대로_둔다() throws Exception {
+        byte[] original = com.ganzithon.wool.upload.service.TestImages.jpeg(false);
+        byte[] photo = com.ganzithon.wool.upload.service.TestImages.insertAfterSoi(original,
+                com.ganzithon.wool.upload.service.TestImages.segment(0xE1, com.ganzithon.wool.upload.service.TestImages.exifWithGps(6)));
+
+        String imageUrl = imageUrlOf(upload(senior, image("camera.jpg", "image/jpeg", photo)).andExpect(status().isCreated()));
+
+        byte[] stored = Files.readAllBytes(fileOf(imageUrl));
+        assertThat(com.ganzithon.wool.upload.service.TestImages.contains(stored, "GPSLatitude")).isFalse();
+        assertThat(com.ganzithon.wool.upload.service.TestImages.contains(stored, "SM-G991N")).isFalse();
+        assertThat(com.ganzithon.wool.upload.service.TestImages.samePixels(stored, original)).isTrue();
+        // 공개 주소로 내려받는 사진에도 위치 정보가 없다.
+        byte[] served = mockMvc.perform(get(imageUrl)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertThat(com.ganzithon.wool.upload.service.TestImages.contains(served, "GPSLatitude")).isFalse();
+    }
+
+    @Test
+    void PNG의_위치_정보도_저장할_때_지운다() throws Exception {
+        byte[] original = com.ganzithon.wool.upload.service.TestImages.png();
+        byte[] photo = com.ganzithon.wool.upload.service.TestImages.insertBeforeIdat(original,
+                com.ganzithon.wool.upload.service.TestImages.pngChunk("tEXt",
+                        com.ganzithon.wool.upload.service.TestImages.ascii("Location\0" + com.ganzithon.wool.upload.service.TestImages.GPS_TEXT)));
+
+        String imageUrl = imageUrlOf(upload(senior, image("shot.png", "image/png", photo)).andExpect(status().isCreated()));
+
+        byte[] stored = Files.readAllBytes(fileOf(imageUrl));
+        assertThat(com.ganzithon.wool.upload.service.TestImages.contains(stored, "GPSLatitude")).isFalse();
+        assertThat(com.ganzithon.wool.upload.service.TestImages.samePixels(stored, original)).isTrue();
+    }
+
+    // 구조를 읽지 못하는 사진은 위치 정보가 남은 채 저장될 수 있어서 받지 않는다. (일부러 깨뜨려 위치 정보 제거를 피하는 것을 막는다)
+    @Test
+    void 구조를_읽을_수_없는_사진은_위치_정보가_있어도_받지_않고_저장하지_않는다() throws Exception {
+        byte[] jpeg = com.ganzithon.wool.upload.service.TestImages.insertAfterSoi(
+                com.ganzithon.wool.upload.service.TestImages.jpeg(false),
+                com.ganzithon.wool.upload.service.TestImages.segment(0xE1, com.ganzithon.wool.upload.service.TestImages.exifWithGps(0)));
+        byte[] png = com.ganzithon.wool.upload.service.TestImages.insertBeforeIdat(png(),
+                com.ganzithon.wool.upload.service.TestImages.pngChunk("tEXt", com.ganzithon.wool.upload.service.TestImages.ascii("a\0" + com.ganzithon.wool.upload.service.TestImages.GPS_TEXT)));
+        byte[] fakeJpeg = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 1, 2, 3};
+
+        upload(senior, image("a.jpg", "image/jpeg", Arrays.copyOf(jpeg, jpeg.length - 40)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UPLOAD_400_001"));
+        upload(senior, image("a.png", "image/png", Arrays.copyOf(png, png.length - 20)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UPLOAD_400_001"));
+        upload(senior, image("a.jpg", "image/jpeg", fakeJpeg))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UPLOAD_400_001"));
+        assertThat(Files.exists(Path.of(storageDir).toAbsolutePath().resolve("letters"))).isFalse();
     }
 
     // 손편지 내용 검사(클로바 OCR)가 webp를 읽지 못해서 받지 않는다. 받으면 검사를 피해 갈 수 있다.
