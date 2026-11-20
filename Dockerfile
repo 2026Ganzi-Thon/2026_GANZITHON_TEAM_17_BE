@@ -1,5 +1,5 @@
 # 한 올 백엔드 이미지. 빌드와 실행을 나눈 멀티스테이지다. (빌드 도구는 최종 이미지에 남기지 않는다)
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
@@ -10,7 +10,7 @@ COPY src ./src
 RUN ./gradlew bootJar --no-daemon -x test
 
 # 헬스체크가 curl을 쓰므로 curl이 들어 있는 Ubuntu 기반 JRE 이미지를 쓴다. (alpine에는 curl이 없다)
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
