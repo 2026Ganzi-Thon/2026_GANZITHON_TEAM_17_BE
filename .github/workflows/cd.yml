@@ -15,7 +15,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 — 시크릿 다루는 잡 앞단이라 SHA 고정
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.4.0 — 시크릿 다루는 잡 앞단이라 SHA 고정
         with:
           persist-credentials: false
       - name: Compute image name
@@ -40,7 +40,7 @@ jobs:
     runs-on: [self-hosted, ec2-prod]
     steps:
       # 서버에 예전부터 놓여 있던 파일이 아니라, 이 커밋 시점의 compose.prod.yml과 Caddyfile을 쓴다.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 — deploy job은 운영 서버 접근 권한이 있는 self-hosted 러너에서 실행되어 SHA 고정
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.4.0 — deploy job은 운영 서버 접근 권한이 있는 self-hosted 러너에서 실행되어 SHA 고정
         with:
           persist-credentials: false
       - name: Deploy (새 앱 이미지로 교체하고 healthy 될 때까지 대기, 실패하면 이전 이미지로 롤백)
