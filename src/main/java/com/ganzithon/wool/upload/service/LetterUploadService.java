@@ -32,8 +32,17 @@ public class LetterUploadService {
         ImageFormat format = ImageFormat.detect(content)
                 .orElseThrow(() -> new BusinessException(UploadErrorCode.INVALID_IMAGE));
 
+        // 그림은 그대로 두고, 촬영 위치·기기 정보 같은 부가 정보만 지운다. (주소를 아는 누구나 사진을 열 수 있어서 위치가 샐 수 있다)
+        // 사진 구조를 읽지 못하면 위치 정보가 남은 채 저장될 수 있으므로 받지 않는다.
+        byte[] stored;
+        try {
+            stored = ImageMetadataStripper.strip(format, content);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(UploadErrorCode.INVALID_IMAGE);
+        }
+
         String filename = UUID.randomUUID() + "." + format.extension();
-        return new LetterUploadResponse(fileStorage.save(LetterImageUrl.DIRECTORY, filename, content));
+        return new LetterUploadResponse(fileStorage.save(LetterImageUrl.DIRECTORY, filename, stored));
     }
 
     private byte[] read(MultipartFile image) {

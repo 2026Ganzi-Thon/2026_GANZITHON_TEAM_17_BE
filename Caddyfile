@@ -3,5 +3,32 @@
 # Let's Encrypt가 정상 인증서를 발급하므로 Caddy가 자동으로 받아 온다. EC2의 IP가 바뀌면 이 주소도 바뀌므로 Elastic IP를 붙여 둔다.
 # 주소는 저장소에 적지 않고 서버의 .env에 DOMAIN으로 둔다. (compose가 Caddy 컨테이너에 환경변수로 넘긴다)
 {$DOMAIN} {
-    reverse_proxy app:8080
+    # 보안 응답 헤더. 맨 앞의 >는 앱의 응답까지 받은 뒤에 붙이라는 뜻이라, 앱이 같은 헤더를 보내도 한 번만 나간다.
+    header {
+        >Strict-Transport-Security "max-age=15552000"
+        >X-Content-Type-Options "nosniff"
+        >X-Frame-Options "DENY"
+        >Referrer-Policy "no-referrer"
+        >Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+        -Via
+    }
+    # API 응답은 화면으로 열릴 일이 없으므로 어떤 자원도 불러오지 못하게 막는다. 업로드 사진은 직접 열어도 스크립트가 실행되지 않게 격리한다.
+    @api path /api/*
+    header @api >Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+    @files path /files/*
+    header @files >Content-Security-Policy "sandbox"
+
+    reverse_proxy app:8080 {
+        # 앱이 아닌 서버(Tomcat)가 만든 HTML 오류 페이지는 서버 종류가 드러나므로, 앱이 쓰는 JSON 오류 모양으로 바꿔 내보낸다.
+        # (앱이 보내는 JSON 오류는 건드리지 않는다. 사진 등 HTML이 아닌 응답도 그대로다)
+        @html_error {
+            status 4xx 5xx
+            header Content-Type text/html*
+        }
+        handle_response @html_error {
+            header Content-Type "application/json; charset=utf-8"
+            respond `{"status":{rp.status_code},"code":"COMMON_{rp.status_code}","message":"요청을 처리할 수 없습니다.","data":null}` {rp.status_code}
+        }
+    }
 }

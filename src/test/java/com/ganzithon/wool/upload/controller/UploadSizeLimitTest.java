@@ -41,10 +41,7 @@ class UploadSizeLimitTest {
     }
 
     private HttpResponse<String> upload(String userId, int imageSize) throws Exception {
-        byte[] image = new byte[imageSize];
-        image[0] = (byte) 0xFF;
-        image[1] = (byte) 0xD8;
-        image[2] = (byte) 0xFF;
+        byte[] image = com.ganzithon.wool.upload.service.TestImages.jpegOfSize(imageSize);
         String boundary = "----wool" + UUID.randomUUID();
         ByteArrayOutputStream body = new ByteArrayOutputStream();
         body.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"image\"; filename=\"a.jpg\"\r\n"
